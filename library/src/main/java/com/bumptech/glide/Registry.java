@@ -23,6 +23,7 @@ import com.bumptech.glide.provider.ModelToResourceClassCache;
 import com.bumptech.glide.provider.ResourceDecoderRegistry;
 import com.bumptech.glide.provider.ResourceEncoderRegistry;
 import com.bumptech.glide.util.pool.FactoryPools;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,11 +66,49 @@ public class Registry {
    * {@link java.io.FileInputStream} and any other subclass.
    *
    * <p>If multiple {@link Encoder}s are registered for the same type or super type, the
-   * {@link Encoder} that is registered first will be used. As a result, it's not currently possible
-   * to replace Glide's default {@link Encoder}s.
+   * {@link Encoder} that is registered first will be used.
+   *
+   * @deprecated Use the equivalent {@link #append(Class, Class, ModelLoaderFactory)} method
+   * instead.
    */
+  @Deprecated
   public <Data> Registry register(Class<Data> dataClass, Encoder<Data> encoder) {
-    encoderRegistry.add(dataClass, encoder);
+    return append(dataClass, encoder);
+  }
+
+  /**
+   * Appends the given {@link Encoder} onto the list of available {@link Encoder}s so that it is
+   * attempted after all earlier and default {@link Encoder}s for the given data class.
+   *
+   * <p>The {@link Encoder} will be used both for the exact data class and any subtypes. For
+   * example, registering an {@link Encoder} for {@link java.io.InputStream} will result in the
+   * {@link Encoder} being used for
+   * {@link android.content.res.AssetFileDescriptor.AutoCloseInputStream},
+   * {@link java.io.FileInputStream} and any other subclass.
+   *
+   * <p>If multiple {@link Encoder}s are registered for the same type or super type, the
+   * {@link Encoder} that is registered first will be used.
+   *
+   * @see #prepend(Class, Encoder)
+   */
+  public <Data> Registry append(Class<Data> dataClass, Encoder<Data> encoder) {
+    encoderRegistry.append(dataClass, encoder);
+    return this;
+  }
+
+  /**
+   * Prepends the given {@link Encoder} into the list of available {@link Encoder}s
+   * so that it is attempted before all later and default {@link Encoder}s for the given
+   * data class.
+   *
+   * <p>This method allows you to replace the default {@link Encoder} because it ensures
+   * the registered {@link Encoder} will run first. If multiple {@link Encoder}s are registered for
+   * the same type or super type, the {@link Encoder} that is registered first will be used.
+   *
+   * @see #append(Class, Encoder)
+   */
+  public <Data> Registry prepend(Class<Data> dataClass, Encoder<Data> encoder) {
+    encoderRegistry.prepend(dataClass, encoder);
     return this;
   }
 
@@ -128,9 +167,9 @@ public class Registry {
   }
 
   /**
-   * Registers the given {@link ResourceEncoder} for the given resource class
-   * ({@link android.graphics.Bitmap}, {@link com.bumptech.glide.load.resource.gif.GifDrawable}
-   * etc).
+   * Appends the given {@link ResourceEncoder} into the list of available {@link ResourceEncoder}s
+   * so that it is attempted after all earlier and default {@link ResourceEncoder}s for the given
+   * data type.
    *
    * <p>The {@link ResourceEncoder} will be used both for the exact resource class and any subtypes.
    * For example, registering an {@link ResourceEncoder} for
@@ -139,12 +178,53 @@ public class Registry {
    * {@link com.bumptech.glide.load.resource.gif.GifDrawable} and any other subclass.
    *
    * <p>If multiple {@link ResourceEncoder}s are registered for the same type or super type, the
-   * {@link ResourceEncoder} that is registered first will be used. As a result, it's not currently
-   * possible to replace Glide's default {@link ResourceEncoder}s.
+   * {@link ResourceEncoder} that is registered first will be used.
+   *
+   * @deprecated Use the equivalent {@link #append(Class, ResourceEncoder)} method instead.
    */
-  public <TResource> Registry register(Class<TResource> resourceClass,
-      ResourceEncoder<TResource> encoder) {
-    resourceEncoderRegistry.add(resourceClass, encoder);
+  @Deprecated
+  public <TResource> Registry register(
+      Class<TResource> resourceClass, ResourceEncoder<TResource> encoder) {
+    return append(resourceClass, encoder);
+  }
+
+  /**
+   * Appends the given {@link ResourceEncoder} into the list of available {@link ResourceEncoder}s
+   * so that it is attempted after all earlier and default {@link ResourceEncoder}s for the given
+   * data type.
+   *
+   * <p>The {@link ResourceEncoder} will be used both for the exact resource class and any subtypes.
+   * For example, registering an {@link ResourceEncoder} for
+   * {@link android.graphics.drawable.Drawable} (not recommended) will result in the
+   * {@link ResourceEncoder} being used for {@link android.graphics.drawable.BitmapDrawable} and
+   * {@link com.bumptech.glide.load.resource.gif.GifDrawable} and any other subclass.
+   *
+   * <p>If multiple {@link ResourceEncoder}s are registered for the same type or super type, the
+   * {@link ResourceEncoder} that is registered first will be used.
+   *
+   * @see #prepend(Class, ResourceEncoder)
+   */
+  public <TResource> Registry append(
+      Class<TResource> resourceClass, ResourceEncoder<TResource> encoder) {
+    resourceEncoderRegistry.append(resourceClass, encoder);
+    return this;
+  }
+
+  /**
+   * Prepends the given {@link ResourceEncoder} into the list of available {@link ResourceEncoder}s
+   * so that it is attempted before all later and default {@link ResourceEncoder}s for the given
+   * data type.
+   *
+   * <p>This method allows you to replace the default {@link ResourceEncoder} because it ensures
+   * the registered {@link ResourceEncoder} will run first. If multiple {@link ResourceEncoder}s are
+   * registered for the same type or super type, the {@link ResourceEncoder} that is registered
+   * first will be used.
+   *
+   * @see #append(Class, ResourceEncoder)
+   */
+  public <TResource> Registry prepend(
+      Class<TResource> resourceClass, ResourceEncoder<TResource> encoder) {
+    resourceEncoderRegistry.prepend(resourceClass, encoder);
     return this;
   }
 
