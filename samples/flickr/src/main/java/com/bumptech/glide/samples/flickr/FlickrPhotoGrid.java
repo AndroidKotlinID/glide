@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -16,7 +17,6 @@ import com.bumptech.glide.ListPreloader;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.samples.flickr.api.Api;
 import com.bumptech.glide.samples.flickr.api.Photo;
 import com.bumptech.glide.util.FixedPreloadSizeProvider;
@@ -67,7 +67,6 @@ public class FlickrPhotoGrid extends Fragment implements PhotoViewer {
 
     thumbnailRequest = GlideApp.with(this)
         .asDrawable()
-        .diskCacheStrategy(DiskCacheStrategy.DATA)
         .centerCrop()
         .override(Api.SQUARE_THUMB_SIZE);
 
@@ -193,14 +192,16 @@ public class FlickrPhotoGrid extends Fragment implements PhotoViewer {
       return photos.size();
     }
 
+    @NonNull
     @Override
     public List<Photo> getPreloadItems(int position) {
       return photos.subList(position, position + 1);
     }
 
+    @NonNull
     @Override
     public RequestBuilder<Drawable> getPreloadRequestBuilder(Photo item) {
-      return preloadRequest.load(item);
+      return fullRequest.clone().thumbnail(thumbnailRequest.clone().load(item)).load(item);
     }
   }
 
