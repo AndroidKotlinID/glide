@@ -3,6 +3,7 @@ package com.bumptech.glide;
 import static com.bumptech.glide.request.RequestOptions.signatureOf;
 
 import android.net.Uri;
+import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.widget.ImageView;
@@ -329,6 +330,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * builders. </p>
    */
   @SuppressWarnings("unchecked")
+  @CheckResult
   @Override
   public RequestBuilder<TranscodeType> clone() {
     try {
@@ -407,18 +409,18 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
       // View's scale type.
       switch (view.getScaleType()) {
         case CENTER_CROP:
-          requestOptions.clone().optionalCenterCrop();
+          requestOptions = requestOptions.clone().optionalCenterCrop();
           break;
         case CENTER_INSIDE:
-          requestOptions.clone().optionalCenterInside();
+          requestOptions = requestOptions.clone().optionalCenterInside();
           break;
         case FIT_CENTER:
         case FIT_START:
         case FIT_END:
-          requestOptions.clone().optionalFitCenter();
+          requestOptions = requestOptions.clone().optionalFitCenter();
           break;
         case FIT_XY:
-          requestOptions.clone().optionalCenterInside();
+          requestOptions = requestOptions.clone().optionalCenterInside();
           break;
         case CENTER:
         case MATRIX:
@@ -545,6 +547,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @deprecated Use {@link RequestManager#downloadOnly()} and {@link #into(Target)}.
    */
   @Deprecated
+  @CheckResult
   public <Y extends Target<File>> Y downloadOnly(Y target) {
     return getDownloadOnlyRequest().into(target);
   }
@@ -562,10 +565,12 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @deprecated Use {@link RequestManager#downloadOnly()} and {@link #into(int, int)}.
    */
   @Deprecated
+  @CheckResult
   public FutureTarget<File> downloadOnly(int width, int height) {
     return getDownloadOnlyRequest().submit(width, height);
   }
 
+  @CheckResult
   protected RequestBuilder<File> getDownloadOnlyRequest() {
     return new RequestBuilder<>(File.class, this).apply(DOWNLOAD_ONLY_OPTIONS);
   }
@@ -633,7 +638,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
               thumbPriority,
               thumbOverrideWidth,
               thumbOverrideHeight,
-              requestOptions);
+              thumbnailBuilder.requestOptions);
       isThumbnailBuilt = false;
       coordinator.setRequests(fullRequest, thumbRequest);
       return coordinator;
