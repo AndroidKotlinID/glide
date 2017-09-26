@@ -119,9 +119,9 @@ public final class Downsampler {
           )
       );
   private static final Queue<BitmapFactory.Options> OPTIONS_QUEUE = Util.createQueue(0);
-  // 5MB. This is the max image header size we can handle, we preallocate a much smaller buffer
+  // 10MB. This is the max image header size we can handle, we preallocate a much smaller buffer
   // but will resize up to this amount if necessary.
-  private static final int MARK_POSITION = 5 * 1024 * 1024;
+  private static final int MARK_POSITION = 10 * 1024 * 1024;
   // Defines the level of precision we get when using inDensity/inTargetDensity to calculate an
   // arbitrary float scale factor.
   private static final int DENSITY_PRECISION_MULTIPLIER = 1000000000;
@@ -227,6 +227,14 @@ public final class Downsampler {
     int sourceWidth = sourceDimensions[0];
     int sourceHeight = sourceDimensions[1];
     String sourceMimeType = options.outMimeType;
+
+    // If we failed to obtain the image dimensions, we may end up with an incorrectly sized Bitmap,
+    // so we want to use a mutable Bitmap type. One way this can happen is if the image header is so
+    // large (10mb+) that our attempt to use inJustDecodeBounds fails and we're forced to decode the
+    // full size image.
+    if (sourceWidth == -1 || sourceHeight == -1) {
+      isHardwareConfigAllowed = false;
+    }
 
     int orientation = ImageHeaderParserUtils.getOrientation(parsers, is, byteArrayPool);
     int degreesToRotate = TransformationUtils.getExifOrientationDegrees(orientation);
@@ -385,12 +393,20 @@ public final class Downsampler {
     // JPEG - Always uses ceiling
     // Webp - Prior to N, always uses floor. At and after N, always uses round.
     options.inSampleSize = powerOfTwoSampleSize;
-    final int powerOfTwoWidth;
-    final int powerOfTwoHeight;
-    // Jpeg rounds with ceiling on all API verisons.
+    int powerOfTwoWidth;
+    int powerOfTwoHeight;
     if (imageType == ImageType.JPEG) {
-      powerOfTwoWidth = (int) Math.ceil(sourceWidth / (float) powerOfTwoSampleSize);
-      powerOfTwoHeight = (int) Math.ceil(sourceHeight / (float) powerOfTwoSampleSize);
+      // libjpegturbo can downsample up to a sample size of 8. libjpegturbo uses ceiling to round.
+      // After libjpegturbo's native rounding, skia does a secondary scale using floor
+      // (integer division). Here we replicate that logic.
+      int nativeScaling = Math.min(powerOfTwoSampleSize, 8);
+      powerOfTwoWidth = (int) Math.ceil(sourceWidth / (float) nativeScaling);
+      powerOfTwoHeight = (int) Math.ceil(sourceHeight / (float) nativeScaling);
+      int secondaryScaling = powerOfTwoSampleSize / 8;
+      if (secondaryScaling > 0) {
+        powerOfTwoWidth = powerOfTwoWidth / secondaryScaling;
+        powerOfTwoHeight = powerOfTwoHeight / secondaryScaling;
+      }
     } else if (imageType == ImageType.PNG || imageType == ImageType.PNG_A) {
       powerOfTwoWidth = (int) Math.floor(sourceWidth / (float) powerOfTwoSampleSize);
       powerOfTwoHeight = (int) Math.floor(sourceHeight / (float) powerOfTwoSampleSize);
