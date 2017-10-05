@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 public @interface GlideModule {
   /**
    * Returns the name of the class that will be used as a replacement for
-   * {@code com.bumptech.glide.Glide} in Applications that depend on Glide's generated code.
+   * {@link com.bumptech.glide.Glide} in Applications that depend on Glide's generated code.
    */
   String glideName() default "GlideApp";
 }

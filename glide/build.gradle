@@ -1,5 +1,3 @@
-import com.android.build.gradle.api.LibraryVariant
-
 apply plugin: 'java'
 
 // The paths of Android projects that should be included in the jar and javadoc.
@@ -29,12 +27,12 @@ static def getJavaPathsForJavadoc() {
 }
 
 (getAndroidPathsForJavadoc() + getAndroidPathsForJar() +
-        getJavaPathsForJar() + getJavaPathsForJavadoc()).each {
+        getJavaPathsForJar() + getJavaPathsForJavadoc()).forEach {
     evaluationDependsOn(it)
 }
 
 def asProjects(paths) {
-    paths.collect { String path -> project(path) }
+    paths.collect { project(it) }
 }
 
 def getAndroidSdkDirectory() {
@@ -95,6 +93,10 @@ def getAndroidJar() {
     "${getAndroidSdkDirectory()}/platforms/${getAndroidCompileSdkVersion()}/android.jar"
 }
 
+def getSupportJar() {
+    "${getAndroidSdkDirectory()}/extras/android/support/v4/android-support-v4.jar"
+}
+
 project.archivesBaseName = "${POM_ARTIFACT_ID}-${VERSION_NAME}"
 
 // Generate javadocs and sources containing batched documentation and sources for all internal
@@ -102,33 +104,31 @@ project.archivesBaseName = "${POM_ARTIFACT_ID}-${VERSION_NAME}"
 ['release', 'debug'].each { variantName ->
 
     task("${variantName}SourceJar", type: Jar) {
-        from getSourceFilesForVariantJar(variantName)
+      from getSourceFilesForVariantJar(variantName)
     }
 
-    def javadocTask = tasks.create("${variantName}Javadoc", Javadoc) {
+    def javadocTask = task("${variantName}Javadoc", type: Javadoc) {
         source = getSourceFilesForVariantJar(variantName)
         source += getSourceFilesForVariantJavadoc(variantName)
 
-        classpath = project.files(
-                getAndroidJar(),
-                getAndroidLibraryVariantsForJar(variantName).collect { LibraryVariant lib ->
-                    lib.javaCompile.classpath.files
-                },
-                getAndroidLibraryVariantsForJavadoc(variantName).collect { LibraryVariant lib ->
-                    lib.javaCompile.classpath.files
-                },
-                getInternalJavaProjectsForJavadoc().collect { Project project ->
-                    project.sourceSets.main.compileClasspath.files
-                },
-                getInternalJavaProjectsForJar().collect { Project project ->
-                    project.sourceSets.main.compileClasspath.files
-                },
-                // Finds dependencies of Android packages that would otherwise be ignored (Volley in
-                // particular)
-                getInternalAndroidProjectsForJavadoc().collect { Project project ->
-                    project.file('build/intermediates/classes/release')
-                }
-        )
+        def classpathFiles = files(getAndroidLibraryVariantsForJar(variantName).collect {
+            files(it.javaCompile.classpath.files, getAndroidJar(), getSupportJar())
+        })
+        classpathFiles += files(getAndroidLibraryVariantsForJavadoc(variantName).collect {
+            files(it.javaCompile.classpath.files, getAndroidJar(), getSupportJar())
+        })
+        classpathFiles += (getInternalJavaProjectsForJavadoc().collect {
+            it.sourceSets.main.compileClasspath.files
+        }.flatten())
+        classpathFiles += (getInternalJavaProjectsForJar().collect {
+            it.sourceSets.main.compileClasspath.files
+        }.flatten())
+        // Finds dependencies of Android packages that would otherwise be ignored (Volley in
+        // particular)
+        classpathFiles += getInternalAndroidProjectsForJavadoc().collect {
+            files("${it.projectDir}/build/intermediates/classes/release")
+        }
+        classpath = files(classpathFiles)
 
         options {
             links("http://docs.oracle.com/javase/7/docs/api/")
@@ -142,7 +142,7 @@ project.archivesBaseName = "${POM_ARTIFACT_ID}-${VERSION_NAME}"
 
         exclude '**/BuildConfig.java'
         exclude '**/R.java'
-    }
+    } as Javadoc
 
     def cleanJavadocTask = task("clean${variantName.capitalize()}Javadoc", type: Delete) {
         delete javadocTask.destinationDir
@@ -157,7 +157,7 @@ project.archivesBaseName = "${POM_ARTIFACT_ID}-${VERSION_NAME}"
 
 jar {
     from files(
-            getReleaseVariantAndroidProjectsForJar().collect { LibraryVariant variant ->
+            getReleaseVariantAndroidProjectsForJar().collect { variant ->
                 variant.javaCompile.destinationDir
             }
     )

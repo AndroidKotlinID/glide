@@ -5,6 +5,16 @@ apply plugin: 'pmd'
 apply plugin: 'jacoco'
 apply plugin: 'com.github.kt3k.coveralls'
 
+findbugs {
+    toolVersion = FINDBUGS_VERSION
+}
+jacoco {
+    toolVersion = JACOCO_VERSION
+}
+coveralls {
+    jacocoReportPath = 'build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml'
+}
+
 dependencies {
     compile project(':third_party:gif_decoder')
     compile project(':third_party:disklrucache')
@@ -21,12 +31,12 @@ dependencies {
     testCompile "com.android.support:support-v4:${ANDROID_SUPPORT_VERSION}"
 }
 
-android.testOptions.unitTests.all { Test testTask ->
+android.testOptions.unitTests.all {
     // configure max heap size of the test JVM
-    testTask.maxHeapSize = TEST_JVM_MEMORY_SIZE as String
+    maxHeapSize = '2048m'
     if (JavaVersion.current() <= JavaVersion.VERSION_1_7) {
         // Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize=2048m; support was removed in 8.0
-        testTask.jvmArgs "-XX:MaxPermSize=${TEST_JVM_MEMORY_SIZE}"
+        jvmArgs '-XX:MaxPermSize=2048m'
     }
 }
 
@@ -60,20 +70,14 @@ afterEvaluate {
         return
     }
 
-    findbugs {
-        toolVersion FINDBUGS_VERSION
-    }
-
-    tasks.create('findbugs', FindBugs) {
-        dependsOn tasks.assembleDebug
+    task findbugs(type: FindBugs, dependsOn: assembleDebug) {
 
         description 'Run findbugs'
         group 'verification'
 
-        classes = fileTree("${project.buildDir}/intermediates/classes/debug/")
-        source android.sourceSets.main.java.srcDirs
+        classes = fileTree('build/intermediates/classes/debug/')
+        source = fileTree('src/main/java')
         classpath = project.configurations.compile
-        classpath += files(android.bootClasspath)
 
         effort = 'max'
 
@@ -88,10 +92,10 @@ afterEvaluate {
     check.dependsOn('findbugs')
 
     pmd {
-        toolVersion PMD_VERSION
+        toolVersion '5.4.0'
     }
 
-    tasks.create('pmd', Pmd) {
+    task pmd(type: Pmd) {
         targetJdk = TargetJdk.VERSION_1_7
 
         description 'Run pmd'
@@ -101,7 +105,7 @@ afterEvaluate {
         // defaults which override rules in the ruleset file...
         ruleSets = []
         ruleSetFiles = files('pmd-ruleset.xml')
-        source android.sourceSets.main.java.srcDirs
+        source = fileTree('src/main/java')
 
         reports {
             xml.enabled = false
@@ -111,21 +115,13 @@ afterEvaluate {
 
     check.dependsOn('pmd')
 
-    jacoco {
-        toolVersion JACOCO_VERSION
-    }
-    coveralls {
-        jacocoReportPath = "${project.buildDir}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
-    }
-
-    tasks.create("jacocoTestReport", JacocoReport) {
-        dependsOn tasks.testDebugUnitTest
-        def coverageSourceDirs = android.sourceSets.main.java.srcDirs
+    task jacocoTestReport(type: JacocoReport, dependsOn: testDebugUnitTest) {
+        def coverageSourceDirs = ['src/main/java']
         group = "Reporting"
         description = "Generate Jacoco coverage reports"
 
         classDirectories = fileTree(
-                dir: "${project.buildDir}/intermediates/classes/debug",
+                dir: 'build/intermediates/classes/debug',
                 excludes: ['**/R.class',
                            '**/R$*.class',
                            '**/BuildConfig.*',
@@ -137,7 +133,7 @@ afterEvaluate {
 
         additionalSourceDirs = files(coverageSourceDirs)
         sourceDirectories = files(coverageSourceDirs)
-        executionData = files("${project.buildDir}/jacoco/testDebug.exec")
+        executionData = files('build/jacoco/testDebug.exec')
 
         reports {
             xml.enabled = true

@@ -65,6 +65,7 @@ import com.bumptech.glide.load.resource.transcode.BitmapDrawableTranscoder;
 import com.bumptech.glide.load.resource.transcode.GifDrawableBytesTranscoder;
 import com.bumptech.glide.manager.ConnectivityMonitorFactory;
 import com.bumptech.glide.manager.RequestManagerRetriever;
+import com.bumptech.glide.module.GlideModule;
 import com.bumptech.glide.module.ManifestParser;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.ImageViewTargetFactory;
@@ -187,7 +188,7 @@ public class Glide implements ComponentCallbacks2 {
     Context applicationContext = context.getApplicationContext();
 
     GeneratedAppGlideModule annotationGeneratedModule = getAnnotationGeneratedGlideModules();
-    List<com.bumptech.glide.module.GlideModule> manifestModules = Collections.emptyList();
+    List<GlideModule> manifestModules = Collections.emptyList();
     if (annotationGeneratedModule == null || annotationGeneratedModule.isManifestParsingEnabled()) {
       manifestModules = new ManifestParser(applicationContext).parse();
     }
@@ -196,9 +197,8 @@ public class Glide implements ComponentCallbacks2 {
         && !annotationGeneratedModule.getExcludedModuleClasses().isEmpty()) {
       Set<Class<?>> excludedModuleClasses =
           annotationGeneratedModule.getExcludedModuleClasses();
-      Iterator<com.bumptech.glide.module.GlideModule> iterator = manifestModules.iterator();
-      while (iterator.hasNext()) {
-        com.bumptech.glide.module.GlideModule current = iterator.next();
+      for (Iterator<GlideModule> iterator = manifestModules.iterator(); iterator.hasNext();) {
+        GlideModule current = iterator.next();
         if (!excludedModuleClasses.contains(current.getClass())) {
           continue;
         }
@@ -210,7 +210,7 @@ public class Glide implements ComponentCallbacks2 {
     }
 
     if (Log.isLoggable(TAG, Log.DEBUG)) {
-      for (com.bumptech.glide.module.GlideModule glideModule : manifestModules) {
+      for (GlideModule glideModule : manifestModules) {
         Log.d(TAG, "Discovered GlideModule from manifest: " + glideModule.getClass());
       }
     }
@@ -220,14 +220,14 @@ public class Glide implements ComponentCallbacks2 {
             ? annotationGeneratedModule.getRequestManagerFactory() : null;
     GlideBuilder builder = new GlideBuilder()
         .setRequestManagerFactory(factory);
-    for (com.bumptech.glide.module.GlideModule module : manifestModules) {
+    for (GlideModule module : manifestModules) {
       module.applyOptions(applicationContext, builder);
     }
     if (annotationGeneratedModule != null) {
       annotationGeneratedModule.applyOptions(applicationContext, builder);
     }
     Glide glide = builder.build(applicationContext);
-    for (com.bumptech.glide.module.GlideModule module : manifestModules) {
+    for (GlideModule module : manifestModules) {
       module.registerComponents(applicationContext, glide, glide.registry);
     }
     if (annotationGeneratedModule != null) {

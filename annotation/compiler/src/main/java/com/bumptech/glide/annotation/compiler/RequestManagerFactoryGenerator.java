@@ -10,10 +10,10 @@ import javax.lang.model.util.Elements;
 
 /**
  * Generates an implementation of
- * {@code com.bumptech.glide.manager.RequestManagerRetriever.RequestManagerFactory} that returns a
- * generated {@code com.bumptech.glide.RequestManager} implementation.
+ * {@link com.bumptech.glide.manager.RequestManagerRetriever.RequestManagerFactory} that returns a
+ * generated {@link com.bumptech.glide.RequestManager} implementation.
  *
- * <p>Generated {@code com.bumptech.glide.manager.RequestManagerRetriever.RequestManagerFactory}
+ * <p>Generated {@link com.bumptech.glide.manager.RequestManagerRetriever.RequestManagerFactory}
  * classes look like this:
  * <pre>
  * <code>
