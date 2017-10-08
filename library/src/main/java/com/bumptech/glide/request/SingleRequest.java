@@ -1,12 +1,9 @@
 package com.bumptech.glide.request;
 
-import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.Nullable;
-import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.util.Pools;
-import android.support.v7.content.res.AppCompatResources;
 import android.util.Log;
 import com.bumptech.glide.GlideContext;
 import com.bumptech.glide.Priority;
@@ -14,6 +11,7 @@ import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.Engine;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.load.engine.Resource;
+import com.bumptech.glide.load.resource.drawable.DrawableDecoderCompat;
 import com.bumptech.glide.request.target.SizeReadyCallback;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
@@ -107,7 +105,6 @@ public final class SingleRequest<R> implements Request,
   private Drawable fallbackDrawable;
   private int width;
   private int height;
-  private static boolean shouldCallAppCompatResources = true;
 
   public static <R> SingleRequest<R> obtain(
       GlideContext glideContext,
@@ -277,8 +274,9 @@ public final class SingleRequest<R> implements Request,
   private void assertNotCallingCallbacks() {
     if (isCallingCallbacks) {
       throw new IllegalStateException("You can't start or clear loads in RequestListener or"
-          + " Target callbacks. If you must do so, consider posting your into() or clear() calls"
-          + " to the main thread using a Handler instead.");
+          + " Target callbacks. If you're trying to start a fallback request when a load fails, use"
+          + " RequestBuilder#error(RequestBuilder). Otherwise consider posting your into() or"
+          + " clear() calls to the main thread using a Handler instead.");
     }
   }
 
@@ -381,29 +379,7 @@ public final class SingleRequest<R> implements Request,
   }
 
   private Drawable loadDrawable(@DrawableRes int resourceId) {
-    if (shouldCallAppCompatResources) {
-      return loadDrawableV7(resourceId);
-    } else {
-      return loadDrawableBase(resourceId);
-    }
-  }
-
-  /**
-   * Tries to load the drawable thanks to AppCompatResources.<br>
-   * This allows to parse VectorDrawables on legacy devices if the appcompat v7 is in the classpath.
-   */
-  private Drawable loadDrawableV7(@DrawableRes int resourceId) {
-    try {
-      return AppCompatResources.getDrawable(glideContext, resourceId);
-    } catch (NoClassDefFoundError error) {
-      shouldCallAppCompatResources = false;
-      return loadDrawableBase(resourceId);
-    }
-  }
-
-  private Drawable loadDrawableBase(@DrawableRes int resourceId) {
-    Resources resources = glideContext.getResources();
-    return ResourcesCompat.getDrawable(resources, resourceId, requestOptions.getTheme());
+    return DrawableDecoderCompat.getDrawable(glideContext, resourceId, requestOptions.getTheme());
   }
 
   private void setErrorPlaceholder() {
@@ -489,6 +465,12 @@ public final class SingleRequest<R> implements Request,
   private void notifyLoadSuccess() {
     if (requestCoordinator != null) {
       requestCoordinator.onRequestSuccess(this);
+    }
+  }
+
+  private void notifyLoadFailed() {
+    if (requestCoordinator != null) {
+      requestCoordinator.onRequestFailed(this);
     }
   }
 
@@ -595,6 +577,8 @@ public final class SingleRequest<R> implements Request,
     } finally {
       isCallingCallbacks = false;
     }
+
+    notifyLoadFailed();
   }
 
   @Override
