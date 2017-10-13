@@ -207,7 +207,7 @@ final class RequestBuilderGenerator {
     ParameterizedTypeName generatedRequestBuilderOfType =
         ParameterizedTypeName.get(generatedRequestBuilderClassName, ClassName.get(typeArgument));
 
-    MethodSpec.Builder builder = MethodSpec.overriding(methodToOverride)
+    MethodSpec.Builder builder = ProcessorUtil.overriding(methodToOverride)
         .returns(generatedRequestBuilderOfType)
         .addCode(CodeBlock.builder()
             .add("return ($T) super.$N(",
@@ -224,7 +224,13 @@ final class RequestBuilderGenerator {
             .build());
 
     for (AnnotationMirror mirror : methodToOverride.getAnnotationMirrors()) {
-      builder.addAnnotation(AnnotationSpec.get(mirror));
+      builder = builder.addAnnotation(AnnotationSpec.get(mirror));
+    }
+
+    if (methodToOverride.isVarArgs()) {
+      builder = builder
+          .addModifiers(Modifier.FINAL)
+          .addAnnotation(SafeVarargs.class);
     }
 
     return builder.build();

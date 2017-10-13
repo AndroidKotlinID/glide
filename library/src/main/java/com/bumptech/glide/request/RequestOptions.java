@@ -5,6 +5,9 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.CheckResult;
+import android.support.annotation.DrawableRes;
+import android.support.annotation.FloatRange;
+import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import com.bumptech.glide.Priority;
@@ -60,6 +63,7 @@ public class RequestOptions implements Cloneable {
   private static final int TRANSFORMATION_REQUIRED = 1 << 17;
   private static final int USE_UNLIMITED_SOURCE_GENERATORS_POOL = 1 << 18;
   private static final int ONLY_RETRIEVE_FROM_CACHE = 1 << 19;
+  private static final int USE_ANIMATION_POOL = 1 << 20;
 
   @Nullable
   private static RequestOptions skipMemoryCacheTrueOptions;
@@ -113,13 +117,15 @@ public class RequestOptions implements Cloneable {
   private boolean useUnlimitedSourceGeneratorsPool;
   private boolean onlyRetrieveFromCache;
   private boolean isScaleOnlyOrNoTransform = true;
+  private boolean useAnimationPool;
 
   /**
    * Returns a {@link RequestOptions} object with {@link #sizeMultiplier(float)} set.
    */
   @SuppressWarnings("WeakerAccess") // Public API
   @CheckResult
-  public static RequestOptions sizeMultiplierOf(float sizeMultiplier) {
+  public static RequestOptions sizeMultiplierOf(
+      @FloatRange(from = 0, to = 1) float sizeMultiplier) {
     return new RequestOptions().sizeMultiplier(sizeMultiplier);
   }
 
@@ -152,7 +158,7 @@ public class RequestOptions implements Cloneable {
    * Returns a {@link RequestOptions} object with {@link #placeholder(int)} set.
    */
   @CheckResult
-  public static RequestOptions placeholderOf(int placeholderId) {
+  public static RequestOptions placeholderOf(@DrawableRes int placeholderId) {
     return new RequestOptions().placeholder(placeholderId);
   }
 
@@ -168,7 +174,7 @@ public class RequestOptions implements Cloneable {
    * Returns a {@link RequestOptions} object with {@link #error(int)}} set.
    */
   @CheckResult
-  public static RequestOptions errorOf(int errorId) {
+  public static RequestOptions errorOf(@DrawableRes int errorId) {
     return new RequestOptions().error(errorId);
   }
 
@@ -195,7 +201,9 @@ public class RequestOptions implements Cloneable {
    */
   @SuppressWarnings("WeakerAccess") // Public API
   @CheckResult
-  public static RequestOptions overrideOf(int width, int height) {
+  public static RequestOptions overrideOf(
+      @IntRange(from = 0) int width,
+      @IntRange(from = 0) int height) {
     return new RequestOptions().override(width, height);
   }
 
@@ -205,7 +213,7 @@ public class RequestOptions implements Cloneable {
    */
   @SuppressWarnings("WeakerAccess") // Public API
   @CheckResult
-  public static RequestOptions overrideOf(int size) {
+  public static RequestOptions overrideOf(@IntRange(from = 0) int size) {
     return overrideOf(size, size);
   }
 
@@ -326,7 +334,7 @@ public class RequestOptions implements Cloneable {
    */
   @SuppressWarnings("WeakerAccess") // Public API
   @CheckResult
-  public static RequestOptions frameOf(long frameTimeMicros) {
+  public static RequestOptions frameOf(@IntRange(from = 0) long frameTimeMicros) {
     return new RequestOptions().frame(frameTimeMicros);
   }
 
@@ -343,7 +351,7 @@ public class RequestOptions implements Cloneable {
    * Returns a {@link RequestOptions} object with {@link #timeout(int)} set.
    */
   @CheckResult
-  public static RequestOptions timeoutOf(int timeout) {
+  public static RequestOptions timeoutOf(@IntRange(from = 0) int timeout) {
     return new RequestOptions().timeout(timeout);
   }
 
@@ -353,7 +361,7 @@ public class RequestOptions implements Cloneable {
    */
   @SuppressWarnings("WeakerAccess") // Public API
   @CheckResult
-  public static RequestOptions encodeQualityOf(int quality) {
+  public static RequestOptions encodeQualityOf(@IntRange(from = 0, to = 100) int quality) {
     return new RequestOptions().encodeQuality(quality);
   }
 
@@ -397,7 +405,7 @@ public class RequestOptions implements Cloneable {
    * @return This request builder.
    */
   @CheckResult
-  public RequestOptions sizeMultiplier(float sizeMultiplier) {
+  public RequestOptions sizeMultiplier(@FloatRange(from = 0, to = 1) float sizeMultiplier) {
     if (isAutoCloneEnabled) {
       return clone().sizeMultiplier(sizeMultiplier);
     }
@@ -411,6 +419,15 @@ public class RequestOptions implements Cloneable {
     return selfOrThrowIfLocked();
   }
 
+  /**
+   * If set to {@code true}, uses a cached unlimited {@link java.util.concurrent.Executor} to run
+   * the request.
+   *
+   * <p>This method should <em>ONLY</em> be used when a Glide load is started recursively on one
+   * of Glide's threads as part of another request. Using this method in other scenarios can lead
+   * to excessive memory usage and OOMs and/or a significant decrease in performance across an
+   * application.
+   */
   @CheckResult
   public RequestOptions useUnlimitedSourceGeneratorsPool(boolean flag) {
     if (isAutoCloneEnabled) {
@@ -419,6 +436,27 @@ public class RequestOptions implements Cloneable {
 
     this.useUnlimitedSourceGeneratorsPool = flag;
     fields |= USE_UNLIMITED_SOURCE_GENERATORS_POOL;
+
+    return selfOrThrowIfLocked();
+  }
+
+  /**
+   * If set to {@code true}, uses a special {@link java.util.concurrent.Executor} that is used
+   * exclusively for decoding frames of animated resources, like GIFs.
+   *
+   * <p>The animation executor disallows network operations and must not be used for loads that
+   * may load remote data. The animation executor has fewer threads available to it than Glide's
+   * normal executors and is only useful as a way of avoiding blocking on longer and more expensive
+   * reads for critical requests like those in an animating GIF.
+   */
+  @CheckResult
+  public RequestOptions useAnimationPool(boolean flag) {
+    if (isAutoCloneEnabled) {
+      return clone().useAnimationPool(flag);
+    }
+
+    useAnimationPool = flag;
+    fields |= USE_ANIMATION_POOL;
 
     return selfOrThrowIfLocked();
   }
@@ -507,7 +545,7 @@ public class RequestOptions implements Cloneable {
    * @return This request builder.
    */
   @CheckResult
-  public RequestOptions placeholder(int resourceId) {
+  public RequestOptions placeholder(@DrawableRes int resourceId) {
     if (isAutoCloneEnabled) {
       return clone().placeholder(resourceId);
     }
@@ -532,7 +570,7 @@ public class RequestOptions implements Cloneable {
    * @return This request builder.
    */
   @CheckResult
-  public RequestOptions fallback(Drawable drawable) {
+  public RequestOptions fallback(@Nullable Drawable drawable) {
     if (isAutoCloneEnabled) {
       return clone().fallback(drawable);
     }
@@ -557,7 +595,7 @@ public class RequestOptions implements Cloneable {
    * @return This request builder.
    */
   @CheckResult
-  public RequestOptions fallback(int resourceId) {
+  public RequestOptions fallback(@DrawableRes int resourceId) {
     if (isAutoCloneEnabled) {
       return clone().fallback(resourceId);
     }
@@ -593,7 +631,7 @@ public class RequestOptions implements Cloneable {
    * @return This request builder.
    */
   @CheckResult
-  public RequestOptions error(int resourceId) {
+  public RequestOptions error(@DrawableRes int resourceId) {
     if (isAutoCloneEnabled) {
       return clone().error(resourceId);
     }
@@ -612,7 +650,7 @@ public class RequestOptions implements Cloneable {
    * @return this request builder.
    */
   @CheckResult
-  public RequestOptions theme(Resources.Theme theme) {
+  public RequestOptions theme(@Nullable Resources.Theme theme) {
     if (isAutoCloneEnabled) {
       return clone().theme(theme);
     }
@@ -779,7 +817,7 @@ public class RequestOptions implements Cloneable {
    * {@link BitmapEncoder#COMPRESSION_QUALITY}.
    */
   @CheckResult
-  public RequestOptions encodeQuality(int quality) {
+  public RequestOptions encodeQuality(@IntRange(from = 0, to = 100) int quality) {
     return set(BitmapEncoder.COMPRESSION_QUALITY, quality);
   }
 
@@ -794,7 +832,7 @@ public class RequestOptions implements Cloneable {
    *                        Android framework implementation return a representative frame.
    */
   @CheckResult
-  public RequestOptions frame(long frameTimeMicros) {
+  public RequestOptions frame(@IntRange(from = 0) long frameTimeMicros) {
     return set(VideoBitmapDecoder.TARGET_FRAME, frameTimeMicros);
   }
 
@@ -864,7 +902,7 @@ public class RequestOptions implements Cloneable {
    * @param timeoutMs The read and write timeout in milliseconds.
    */
   @CheckResult
-  public RequestOptions timeout(int timeoutMs) {
+  public RequestOptions timeout(@IntRange(from = 0) int timeoutMs) {
     return set(HttpGlideUrlLoader.TIMEOUT, timeoutMs);
   }
 
@@ -1101,7 +1139,7 @@ public class RequestOptions implements Cloneable {
   // Guaranteed to modify the current object by the isAutoCloneEnabledCheck.
   @SuppressWarnings("CheckResult")
   @CheckResult
-  public RequestOptions optionalTransform(Transformation<Bitmap> transformation) {
+  public RequestOptions optionalTransform(@NonNull Transformation<Bitmap> transformation) {
     if (isAutoCloneEnabled) {
       return clone().optionalTransform(transformation);
     }
@@ -1131,8 +1169,8 @@ public class RequestOptions implements Cloneable {
    * @param transformation The {@link Transformation} to apply.
    */
   @CheckResult
-  public <T> RequestOptions optionalTransform(Class<T> resourceClass,
-      Transformation<T> transformation) {
+  public <T> RequestOptions optionalTransform(
+      @NonNull Class<T> resourceClass, @NonNull Transformation<T> transformation) {
     if (isAutoCloneEnabled) {
       return clone().optionalTransform(resourceClass, transformation);
     }
@@ -1163,7 +1201,7 @@ public class RequestOptions implements Cloneable {
   @SuppressWarnings("CheckResult")
   @CheckResult
   public <T> RequestOptions transform(
-      Class<T> resourceClass, Transformation<T> transformation) {
+      @NonNull Class<T> resourceClass, @NonNull Transformation<T> transformation) {
     if (isAutoCloneEnabled) {
       return clone().transform(resourceClass, transformation);
     }
@@ -1216,7 +1254,7 @@ public class RequestOptions implements Cloneable {
   }
 
   @CheckResult
-  public RequestOptions apply(RequestOptions other) {
+  public RequestOptions apply(@NonNull RequestOptions other) {
     if (isAutoCloneEnabled) {
       return clone().apply(other);
     }
@@ -1226,6 +1264,9 @@ public class RequestOptions implements Cloneable {
     }
     if (isSet(other.fields, USE_UNLIMITED_SOURCE_GENERATORS_POOL)) {
       useUnlimitedSourceGeneratorsPool = other.useUnlimitedSourceGeneratorsPool;
+    }
+    if (isSet(other.fields, USE_ANIMATION_POOL)) {
+      useAnimationPool = other.useAnimationPool;
     }
     if (isSet(other.fields, DISK_CACHE_STRATEGY)) {
       diskCacheStrategy = other.diskCacheStrategy;
@@ -1501,6 +1542,10 @@ public class RequestOptions implements Cloneable {
 
   public final boolean getUseUnlimitedSourceGeneratorsPool() {
     return useUnlimitedSourceGeneratorsPool;
+  }
+
+  public final boolean getUseAnimationPool() {
+    return useAnimationPool;
   }
 
   public final boolean getOnlyRetrieveFromCache() {
