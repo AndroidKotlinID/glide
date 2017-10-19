@@ -1,5 +1,7 @@
 package com.bumptech.glide.request;
 
+import android.content.Context;
+import android.content.res.Resources.Theme;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.Nullable;
@@ -84,6 +86,7 @@ public final class SingleRequest<R> implements Request,
   private final StateVerifier stateVerifier = StateVerifier.newInstance();
 
   private RequestCoordinator requestCoordinator;
+  private Context context;
   private GlideContext glideContext;
   @Nullable
   private Object model;
@@ -107,6 +110,7 @@ public final class SingleRequest<R> implements Request,
   private int height;
 
   public static <R> SingleRequest<R> obtain(
+      Context context,
       GlideContext glideContext,
       Object model,
       Class<R> transcodeClass,
@@ -125,6 +129,7 @@ public final class SingleRequest<R> implements Request,
       request = new SingleRequest<>();
     }
     request.init(
+        context,
         glideContext,
         model,
         transcodeClass,
@@ -146,6 +151,7 @@ public final class SingleRequest<R> implements Request,
   }
 
   private void init(
+      Context context,
       GlideContext glideContext,
       Object model,
       Class<R> transcodeClass,
@@ -158,6 +164,7 @@ public final class SingleRequest<R> implements Request,
       RequestCoordinator requestCoordinator,
       Engine engine,
       TransitionFactory<? super R> animationFactory) {
+    this.context = context;
     this.glideContext = glideContext;
     this.model = model;
     this.transcodeClass = transcodeClass;
@@ -181,6 +188,7 @@ public final class SingleRequest<R> implements Request,
   @Override
   public void recycle() {
     assertNotCallingCallbacks();
+    context = null;
     glideContext = null;
     model = null;
     transcodeClass = null;
@@ -379,7 +387,9 @@ public final class SingleRequest<R> implements Request,
   }
 
   private Drawable loadDrawable(@DrawableRes int resourceId) {
-    return DrawableDecoderCompat.getDrawable(glideContext, resourceId, requestOptions.getTheme());
+    Theme theme = requestOptions.getTheme() != null
+        ? requestOptions.getTheme() : context.getTheme();
+    return DrawableDecoderCompat.getDrawable(glideContext, resourceId, theme);
   }
 
   private void setErrorPlaceholder() {
@@ -595,7 +605,8 @@ public final class SingleRequest<R> implements Request,
           // We do not want to require that RequestListeners implement equals/hashcode, so we don't
           // compare them using equals(). We can however, at least assert that the request listener
           // is either present or not present in both requests.
-          && requestListener != null ? that.requestListener != null : that.requestListener == null;
+          && (requestListener != null
+          ? that.requestListener != null : that.requestListener == null);
     }
     return false;
   }
