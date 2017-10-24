@@ -1,8 +1,11 @@
 package com.bumptech.glide;
 
+import static com.bumptech.glide.request.RequestOptions.diskCacheStrategyOf;
 import static com.bumptech.glide.request.RequestOptions.signatureOf;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.annotation.CheckResult;
 import android.support.annotation.DrawableRes;
@@ -317,7 +320,53 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
   }
 
   /**
-   * Returns a request builder to load the given {@link java.lang.String}. signature.
+   * Returns a request builder to load the given {@link Bitmap}.
+   *
+   * <p>It's almost always better to allow Glide to load {@link Bitmap}s than
+   * pass {@link Bitmap}s into Glide. If you have a custom way to obtain {@link Bitmap}s that is
+   * not supported by Glide by default, consider registering a custom
+   * {@link com.bumptech.glide.load.model.ModelLoader} or
+   * {@link com.bumptech.glide.load.ResourceDecoder} instead of using this method.
+   *
+   * <p>The {@link DiskCacheStrategy} is set to {@link DiskCacheStrategy#NONE}. Using other
+   * strategies may result in undefined behavior.
+   *
+   * <p>In memory caching relies on Object equality. The contents of the {@link Bitmap}s are not
+   * compared.
+   *
+   * @see #load(Object)
+   */
+  @CheckResult
+  public RequestBuilder<TranscodeType> load(@Nullable Bitmap bitmap) {
+    return loadGeneric(bitmap)
+        .apply(diskCacheStrategyOf(DiskCacheStrategy.NONE));
+  }
+
+  /**
+   * Returns a request builder to load the given {@link Drawable}.
+   *
+   * <p>It's almost always better to allow Glide to load {@link Bitmap}s than to pass
+   * {@link Bitmap}s into Glide using this method . If you have a custom way to obtain
+   * {@link Bitmap}s that is not supported by Glide by default, consider registering a custom
+   * {@link com.bumptech.glide.load.model.ModelLoader} or
+   * {@link com.bumptech.glide.load.ResourceDecoder} instead of using this method.
+   *
+   * <p>The {@link DiskCacheStrategy} is set to {@link DiskCacheStrategy#NONE}. Using other
+   * strategies may result in undefined behavior.
+   *
+   * <p>In memory caching relies on Object equality. The contents of the {@link Drawable}s are not
+   * compared.
+   *
+   * @see #load(Object)
+   */
+  @CheckResult
+  public RequestBuilder<TranscodeType> load(@Nullable Drawable drawable) {
+    return loadGeneric(drawable)
+        .apply(diskCacheStrategyOf(DiskCacheStrategy.NONE));
+  }
+
+  /**
+   * Returns a request builder to load the given {@link java.lang.String}.
    *
    * <p> Note - this method caches data using only the given String as the cache key. If the data is
    * a Uri outside of your control, or you otherwise expect the data represented by the given String
@@ -476,10 +525,19 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @see RequestManager#clear(Target)
    */
   public <Y extends Target<TranscodeType>> Y into(@NonNull Y target) {
-    return into(target, getMutableOptions());
+    return into(target, /*targetListener=*/ null);
   }
 
-  private <Y extends Target<TranscodeType>> Y into(@NonNull Y target, RequestOptions options) {
+  private <Y extends Target<TranscodeType>> Y into(
+      @NonNull Y target,
+      @Nullable RequestListener<TranscodeType> targetListener) {
+    return into(target, targetListener, getMutableOptions());
+  }
+
+  private <Y extends Target<TranscodeType>> Y into(
+      @NonNull Y target,
+      @Nullable RequestListener<TranscodeType> targetListener,
+      RequestOptions options) {
     Util.assertMainThread();
     Preconditions.checkNotNull(target);
     if (!isModelSet) {
@@ -487,7 +545,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
     }
 
     options = options.autoClone();
-    Request request = buildRequest(target, options);
+    Request request = buildRequest(target, targetListener, options);
 
     Request previous = target.getRequest();
     if (request.isEquivalentTo(previous)) {
@@ -557,7 +615,10 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
       }
     }
 
-    return into(glideContext.buildImageViewTarget(view, transcodeClass), requestOptions);
+    return into(
+        glideContext.buildImageViewTarget(view, transcodeClass),
+        /*targetListener=*/ null,
+        requestOptions);
   }
 
   /**
@@ -617,12 +678,12 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
         @Override
         public void run() {
           if (!target.isCancelled()) {
-            into(target);
+            into(target, target);
           }
         }
       });
     } else {
-      into(target);
+      into(target, target);
     }
 
     return target;
@@ -717,15 +778,30 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
     }
   }
 
-  private Request buildRequest(Target<TranscodeType> target, RequestOptions requestOptions) {
-    return buildRequestRecursive(target, null, transitionOptions, requestOptions.getPriority(),
-        requestOptions.getOverrideWidth(), requestOptions.getOverrideHeight(), requestOptions);
+  private Request buildRequest(
+      Target<TranscodeType> target,
+      @Nullable RequestListener<TranscodeType> targetListener,
+      RequestOptions requestOptions) {
+    return buildRequestRecursive(
+        target,
+        targetListener,
+        /*parentCoordinator=*/ null,
+        transitionOptions,
+        requestOptions.getPriority(),
+        requestOptions.getOverrideWidth(),
+        requestOptions.getOverrideHeight(),
+        requestOptions);
   }
 
-  private Request buildRequestRecursive(Target<TranscodeType> target,
+  private Request buildRequestRecursive(
+      Target<TranscodeType> target,
+      @Nullable RequestListener<TranscodeType> targetListener,
       @Nullable RequestCoordinator parentCoordinator,
       TransitionOptions<?, ? super TranscodeType> transitionOptions,
-      Priority priority, int overrideWidth, int overrideHeight, RequestOptions requestOptions) {
+      Priority priority,
+      int overrideWidth,
+      int overrideHeight,
+      RequestOptions requestOptions) {
 
     // Build the ErrorRequestCoordinator first if necessary so we can update parentCoordinator.
     ErrorRequestCoordinator errorRequestCoordinator = null;
@@ -737,6 +813,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
     Request mainRequest =
         buildThumbnailRequestRecursive(
             target,
+            targetListener,
             parentCoordinator,
             transitionOptions,
             priority,
@@ -758,6 +835,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
 
     Request errorRequest = errorBuilder.buildRequestRecursive(
         target,
+        targetListener,
         errorRequestCoordinator,
         errorBuilder.transitionOptions,
         errorBuilder.requestOptions.getPriority(),
@@ -768,10 +846,15 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
     return errorRequestCoordinator;
   }
 
-  private Request buildThumbnailRequestRecursive(Target<TranscodeType> target,
-        @Nullable RequestCoordinator parentCoordinator,
-        TransitionOptions<?, ? super TranscodeType> transitionOptions,
-        Priority priority, int overrideWidth, int overrideHeight, RequestOptions requestOptions) {
+  private Request buildThumbnailRequestRecursive(
+      Target<TranscodeType> target,
+      RequestListener<TranscodeType> targetListener,
+      @Nullable RequestCoordinator parentCoordinator,
+      TransitionOptions<?, ? super TranscodeType> transitionOptions,
+      Priority priority,
+      int overrideWidth,
+      int overrideHeight,
+      RequestOptions requestOptions) {
     if (thumbnailBuilder != null) {
       // Recursive case: contains a potentially recursive thumbnail request builder.
       if (isThumbnailBuilt) {
@@ -800,13 +883,22 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
       }
 
       ThumbnailRequestCoordinator coordinator = new ThumbnailRequestCoordinator(parentCoordinator);
-      Request fullRequest = obtainRequest(target, requestOptions, coordinator,
-          transitionOptions, priority, overrideWidth, overrideHeight);
+      Request fullRequest =
+          obtainRequest(
+              target,
+              targetListener,
+              requestOptions,
+              coordinator,
+              transitionOptions,
+              priority,
+              overrideWidth,
+              overrideHeight);
       isThumbnailBuilt = true;
       // Recursively generate thumbnail requests.
       Request thumbRequest =
           thumbnailBuilder.buildRequestRecursive(
               target,
+              targetListener,
               coordinator,
               thumbTransitionOptions,
               thumbPriority,
@@ -819,27 +911,55 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
     } else if (thumbSizeMultiplier != null) {
       // Base case: thumbnail multiplier generates a thumbnail request, but cannot recurse.
       ThumbnailRequestCoordinator coordinator = new ThumbnailRequestCoordinator(parentCoordinator);
-      Request fullRequest = obtainRequest(target, requestOptions, coordinator, transitionOptions,
-          priority, overrideWidth, overrideHeight);
+      Request fullRequest =
+          obtainRequest(
+              target,
+              targetListener,
+              requestOptions,
+              coordinator,
+              transitionOptions,
+              priority,
+              overrideWidth,
+              overrideHeight);
       RequestOptions thumbnailOptions = requestOptions.clone()
           .sizeMultiplier(thumbSizeMultiplier);
 
-      Request thumbnailRequest = obtainRequest(target, thumbnailOptions, coordinator,
-          transitionOptions, getThumbnailPriority(priority), overrideWidth, overrideHeight);
+      Request thumbnailRequest =
+          obtainRequest(
+              target,
+              targetListener,
+              thumbnailOptions,
+              coordinator,
+              transitionOptions,
+              getThumbnailPriority(priority),
+              overrideWidth,
+              overrideHeight);
 
       coordinator.setRequests(fullRequest, thumbnailRequest);
       return coordinator;
     } else {
       // Base case: no thumbnail.
-      return obtainRequest(target, requestOptions, parentCoordinator, transitionOptions, priority,
-          overrideWidth, overrideHeight);
+      return obtainRequest(
+          target,
+          targetListener,
+          requestOptions,
+          parentCoordinator,
+          transitionOptions,
+          priority,
+          overrideWidth,
+          overrideHeight);
     }
   }
 
-  private Request obtainRequest(Target<TranscodeType> target,
-      RequestOptions requestOptions, RequestCoordinator requestCoordinator,
-      TransitionOptions<?, ? super TranscodeType> transitionOptions, Priority priority,
-      int overrideWidth, int overrideHeight) {
+  private Request obtainRequest(
+      Target<TranscodeType> target,
+      RequestListener<TranscodeType> targetListener,
+      RequestOptions requestOptions,
+      RequestCoordinator requestCoordinator,
+      TransitionOptions<?, ? super TranscodeType> transitionOptions,
+      Priority priority,
+      int overrideWidth,
+      int overrideHeight) {
     return SingleRequest.obtain(
         context,
         glideContext,
@@ -850,6 +970,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
         overrideHeight,
         priority,
         target,
+        targetListener,
         requestListener,
         requestCoordinator,
         glideContext.getEngine(),

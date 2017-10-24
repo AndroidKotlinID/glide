@@ -7,7 +7,6 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import com.bumptech.glide.load.Options;
 import com.bumptech.glide.load.ResourceDecoder;
 import com.bumptech.glide.load.engine.Resource;
@@ -42,7 +41,7 @@ public class ResourceDrawableDecoder implements ResourceDecoder<Uri, Drawable> {
     return source.getScheme().equals(ContentResolver.SCHEME_ANDROID_RESOURCE);
   }
 
-  @Nullable
+  @NonNull
   @Override
   public Resource<Drawable> decode(Uri source, int width, int height, Options options)
       throws IOException {
@@ -52,7 +51,7 @@ public class ResourceDrawableDecoder implements ResourceDecoder<Uri, Drawable> {
         ? context : getContextForPackage(source, packageName);
     // We can't get a theme from another application.
     Drawable drawable = DrawableDecoderCompat.getDrawable(toUse, resId);
-    return new InternalDrawableResource(drawable);
+    return NonOwnedDrawableResource.newInstance(drawable);
   }
 
   @NonNull
@@ -88,30 +87,5 @@ public class ResourceDrawableDecoder implements ResourceDecoder<Uri, Drawable> {
        throw new IllegalArgumentException("Failed to obtain resource id for: " + source);
      }
      return result;
-  }
-
-  private static final class InternalDrawableResource extends DrawableResource<Drawable> {
-
-    InternalDrawableResource(Drawable drawable) {
-      super(drawable);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Class<Drawable> getResourceClass() {
-      return (Class<Drawable>) drawable.getClass();
-    }
-
-    @Override
-    public int getSize() {
-      // 4 bytes per pixel for ARGB_8888 Bitmaps is something of a reasonable approximation. If
-      // there are no intrinsic bounds, we can fall back just to 1.
-      return Math.max(1, drawable.getIntrinsicWidth() * drawable.getIntrinsicHeight() * 4);
-    }
-
-    @Override
-    public void recycle() {
-      // Do nothing.
-    }
   }
 }
