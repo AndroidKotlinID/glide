@@ -11,9 +11,15 @@ set -e
   --parallel &
 pid=$!
 
-./scripts/install_firebase.sh
+if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+  wait $pid
+  echo "Unable to run Firebase tests for pull requests, exiting"
+  exit 0
+else 
+  ./scripts/install_firebase.sh
+  wait $pid
+fi
 
-wait $pid
 
 declare -a samples=("flickr" 
                 "giphy" 
@@ -32,7 +38,9 @@ do
     --app $sample_apk \
     --device model=Nexus6P,version=26,locale=en,orientation=portrait  \
     --project android-glide \
-    --no-auto-google-login &
+    --no-auto-google-login \
+    --timeout 2m \
+    &
   pids+=("$!")
 done
 
