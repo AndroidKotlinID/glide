@@ -20,7 +20,7 @@ public final class DrawableDecoderCompat {
   }
 
   /**
-   * @see #getDrawable(Context, int, Theme)
+   * See {@code getDrawable(Context, int, Theme)}.
    */
   public static Drawable getDrawable(Context context, @DrawableRes int id) {
     return getDrawable(context, id, /*theme=*/ null);
@@ -42,6 +42,9 @@ public final class DrawableDecoderCompat {
       }
     } catch (NoClassDefFoundError error) {
       shouldCallAppCompatResources = false;
+    } catch (Resources.NotFoundException e) {
+      // Ignored, this can be thrown when drawable compat attempts to decode a canary resource. If
+      // that decode attempt fails, we still want to try with the v4 ResourcesCompat below.
     }
 
     return loadDrawableV4(context, id, theme != null ? theme : context.getTheme());
