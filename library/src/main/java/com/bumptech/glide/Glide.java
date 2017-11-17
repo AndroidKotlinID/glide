@@ -186,11 +186,17 @@ public class Glide implements ComponentCallbacks2 {
   @VisibleForTesting
   @Deprecated
   public static synchronized void init(Glide glide) {
+    if (Glide.glide != null) {
+      tearDown();
+    }
     Glide.glide = glide;
   }
 
   @VisibleForTesting
   public static synchronized void init(Context context, GlideBuilder builder) {
+    if (Glide.glide != null) {
+      tearDown();
+    }
     initializeGlide(context, builder);
   }
 
@@ -705,15 +711,16 @@ public class Glide implements ComponentCallbacks2 {
     return registry;
   }
 
-  void removeFromManagers(Target<?> target) {
+  boolean removeFromManagers(Target<?> target) {
     synchronized (managers) {
       for (RequestManager requestManager : managers) {
         if (requestManager.untrack(target)) {
-          return;
+          return true;
         }
       }
     }
-    throw new IllegalStateException("Failed to remove target from managers");
+
+    return false;
   }
 
   void registerRequestManager(RequestManager requestManager) {
