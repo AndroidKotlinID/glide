@@ -13,7 +13,8 @@ import android.widget.ImageView;
 import com.bumptech.glide.request.Request;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
-import com.bumptech.glide.tests.BackgroundUtil;
+import com.bumptech.glide.request.target.ViewTarget;
+import com.bumptech.glide.tests.BackgroundUtil.BackgroundTester;
 import com.bumptech.glide.tests.TearDownGlide;
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,8 +32,8 @@ import org.robolectric.annotation.Config;
 public class RequestBuilderTest {
   @Rule public TearDownGlide tearDownGlide = new TearDownGlide();
 
-  @Mock GlideContext glideContext;
-  @Mock RequestManager requestManager;
+  @Mock private GlideContext glideContext;
+  @Mock private RequestManager requestManager;
   private Glide glide;
   private Application context;
 
@@ -92,11 +93,10 @@ public class RequestBuilderTest {
   @Test(expected = RuntimeException.class)
   public void testThrowsIfIntoViewCalledOnBackgroundThread() throws InterruptedException {
     final ImageView imageView = new ImageView(RuntimeEnvironment.application);
-    testInBackground(new BackgroundUtil.BackgroundTester() {
+    testInBackground(new BackgroundTester() {
       @Override
-      public void runTest() throws Exception {
-        getNullModelRequest().into(imageView);
-
+      public void runTest() {
+       getNullModelRequest().into(imageView);
       }
     });
   }
@@ -104,17 +104,17 @@ public class RequestBuilderTest {
   @Test(expected = RuntimeException.class)
   public void testThrowsIfIntoTargetCalledOnBackgroundThread() throws InterruptedException {
     final Target<Object> target = mock(Target.class);
-    testInBackground(new BackgroundUtil.BackgroundTester() {
+    testInBackground(new BackgroundTester() {
       @Override
-      public void runTest() throws Exception {
-        getNullModelRequest().into(target);
+      public void runTest() {
+         getNullModelRequest().into(target);
       }
     });
   }
 
   private RequestBuilder<Object> getNullModelRequest() {
     when(glideContext.buildImageViewTarget(isA(ImageView.class), isA(Class.class)))
-        .thenReturn(mock(Target.class));
+        .thenReturn(mock(ViewTarget.class));
     when(glideContext.getDefaultRequestOptions()).thenReturn(new RequestOptions());
     when(requestManager.getDefaultRequestOptions())
         .thenReturn(new RequestOptions());
