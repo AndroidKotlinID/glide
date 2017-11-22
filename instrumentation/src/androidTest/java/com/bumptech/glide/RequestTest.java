@@ -3,9 +3,9 @@ package com.bumptech.glide;
 import static com.bumptech.glide.test.Matchers.anyDrawable;
 import static com.bumptech.glide.test.Matchers.anyTarget;
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -52,7 +52,7 @@ public class RequestTest {
     // Some emulators only have a single resize thread, so waiting on a latch will block them
     // forever.
     Glide.init(context,
-        new GlideBuilder().setResizeExecutor(GlideExecutor.newUnlimitedSourceExecutor()));
+        new GlideBuilder().setSourceExecutor(GlideExecutor.newUnlimitedSourceExecutor()));
   }
 
   @Test

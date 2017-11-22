@@ -8,9 +8,8 @@ import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
 import android.support.test.InstrumentationRegistry;
 import android.support.v4.content.res.ResourcesCompat;
-import com.google.common.truth.FailureStrategy;
+import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
-import com.google.common.truth.SubjectFactory;
 import com.google.common.truth.Truth;
 
 /**
@@ -20,17 +19,17 @@ import com.google.common.truth.Truth;
 @SuppressWarnings({"WeakerAccess", "unused"})
 public final class BitmapSubject extends Subject<BitmapSubject, Bitmap> {
 
-  private static final SubjectFactory<BitmapSubject, Bitmap> FACTORY =
-      new SubjectFactory<BitmapSubject, Bitmap>() {
+  private static final Subject.Factory<BitmapSubject, Bitmap> FACTORY =
+      new Subject.Factory<BitmapSubject, Bitmap>() {
         @Override
-        public BitmapSubject getSubject(@NonNull FailureStrategy fs, @NonNull Bitmap that) {
-          return new BitmapSubject(fs, that);
+        public BitmapSubject createSubject(
+            @NonNull FailureMetadata metadata, @NonNull Bitmap actual) {
+          return new BitmapSubject(metadata, actual);
         }
       };
 
-  private BitmapSubject(FailureStrategy failureStrategy,
-      Bitmap subject) {
-    super(failureStrategy, subject);
+  private BitmapSubject(FailureMetadata failureMetadata, Bitmap subject) {
+    super(failureMetadata, subject);
   }
 
   public static BitmapSubject assertThat(Drawable drawable) {
@@ -45,8 +44,8 @@ public final class BitmapSubject extends Subject<BitmapSubject, Bitmap> {
   }
 
   @Override
-  protected String getDisplaySubject() {
-    return getDisplayString(getSubject());
+  protected String actualCustomStringRepresentation() {
+    return getDisplayString(actual());
   }
 
   private static String getDisplayString(Bitmap bitmap) {
@@ -65,19 +64,19 @@ public final class BitmapSubject extends Subject<BitmapSubject, Bitmap> {
   }
 
   public void isMutable()  {
-    if (!getSubject().isMutable()) {
+    if (!actual().isMutable()) {
       fail("is mutable");
     }
   }
 
   public void isImmutable() {
-    if (getSubject().isMutable()) {
+    if (actual().isMutable()) {
       fail("is immutable");
     }
   }
 
   public void isNotRecycled() {
-    if (getSubject().isRecycled()) {
+    if (actual().isRecycled()) {
       fail("is not recycled");
     }
   }
@@ -91,7 +90,7 @@ public final class BitmapSubject extends Subject<BitmapSubject, Bitmap> {
   }
 
   public void sameAs(Bitmap other) {
-    if (!getSubject().sameAs(other)) {
+    if (!actual().sameAs(other)) {
       fail("is the same as " + getDisplayString(other));
     }
   }
