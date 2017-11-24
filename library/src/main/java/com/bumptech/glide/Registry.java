@@ -328,7 +328,7 @@ public class Registry {
    * Registers a new {@link com.bumptech.glide.load.data.DataRewinder.Factory} to handle a
    * non-default data type that can be rewind to allow for efficient reads of file headers.
    */
-  public Registry register(DataRewinder.Factory factory) {
+  public Registry register(DataRewinder.Factory<?> factory) {
     dataRewinderRegistry.register(factory);
     return this;
   }
@@ -438,8 +438,10 @@ public class Registry {
    * @param dataClass  the data class (e.g. {@link java.io.InputStream},
    * {@link java.io.FileDescriptor}).
    */
-  public <Model, Data> Registry replace(Class<Model> modelClass, Class<Data> dataClass,
-      ModelLoaderFactory<Model, Data> factory) {
+  public <Model, Data> Registry replace(
+      Class<Model> modelClass,
+      Class<Data> dataClass,
+      ModelLoaderFactory<? extends Model, ? extends Data> factory) {
     modelLoaderRegistry.replace(modelClass, dataClass, factory);
     return this;
   }
@@ -560,6 +562,8 @@ public class Registry {
    * Thrown when no {@link com.bumptech.glide.load.model.ModelLoader} is registered for a given
    * model class.
    */
+  // Never serialized by Glide.
+  @SuppressWarnings("serial")
   public static class NoModelLoaderAvailableException extends MissingComponentException {
     public NoModelLoaderAvailableException(Object model) {
       super("Failed to find any ModelLoaders for model: " + model);
@@ -573,6 +577,8 @@ public class Registry {
   /**
    * Thrown when no {@link ResourceEncoder} is registered for a given resource class.
    */
+  // Never serialized by Glide.
+  @SuppressWarnings("serial")
   public static class NoResultEncoderAvailableException extends MissingComponentException {
     public NoResultEncoderAvailableException(Class<?> resourceClass) {
       super("Failed to find result encoder for resource class: " + resourceClass);
@@ -582,6 +588,8 @@ public class Registry {
   /**
    * Thrown when no {@link Encoder} is registered for a given data class.
    */
+  // Never serialized by Glide.
+  @SuppressWarnings("serial")
   public static class NoSourceEncoderAvailableException extends MissingComponentException {
     public NoSourceEncoderAvailableException(Class<?> dataClass) {
       super("Failed to find source encoder for data class: " + dataClass);
@@ -591,6 +599,8 @@ public class Registry {
   /**
    * Thrown when some necessary component is missing for a load.
    */
+  // Never serialized by Glide.
+  @SuppressWarnings("serial")
   public static class MissingComponentException extends RuntimeException {
     public MissingComponentException(String message) {
       super(message);
@@ -600,6 +610,8 @@ public class Registry {
   /**
    * Thrown when no {@link ImageHeaderParser} is registered.
    */
+  // Never serialized by Glide.
+  @SuppressWarnings("serial")
   public static final class NoImageHeaderParserException extends MissingComponentException {
     public NoImageHeaderParserException() {
       super("Failed to find image header parser.");
