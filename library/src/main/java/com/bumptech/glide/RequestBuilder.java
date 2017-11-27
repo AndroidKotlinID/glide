@@ -2,6 +2,7 @@ package com.bumptech.glide;
 
 import static com.bumptech.glide.request.RequestOptions.diskCacheStrategyOf;
 import static com.bumptech.glide.request.RequestOptions.signatureOf;
+import static com.bumptech.glide.request.RequestOptions.skipMemoryCacheOf;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -28,12 +29,10 @@ import com.bumptech.glide.request.target.PreloadTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.target.ViewTarget;
 import com.bumptech.glide.signature.ApplicationVersionSignature;
-import com.bumptech.glide.signature.ObjectKey;
 import com.bumptech.glide.util.Preconditions;
 import com.bumptech.glide.util.Util;
 import java.io.File;
 import java.net.URL;
-import java.util.UUID;
 
 /**
  * A generic class that can handle setting options and staring loads for generic resource types.
@@ -43,7 +42,8 @@ import java.util.UUID;
  */
 // Public API.
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class RequestBuilder<TranscodeType> implements Cloneable {
+public class RequestBuilder<TranscodeType> implements Cloneable,
+    ModelTypes<RequestBuilder<TranscodeType>> {
   // Used in generated subclasses
   protected static final RequestOptions DOWNLOAD_ONLY_OPTIONS =
       new RequestOptions().diskCacheStrategy(DiskCacheStrategy.DATA).priority(Priority.LOW)
@@ -230,7 +230,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
   @SuppressWarnings({"CheckResult", "unchecked"})
   @CheckResult
   public RequestBuilder<TranscodeType> thumbnail(
-      @Nullable RequestBuilder<TranscodeType> /*@Nullable*/ ... thumbnails) {
+      @Nullable RequestBuilder<TranscodeType>... thumbnails) {
     if (thumbnails == null || thumbnails.length == 0) {
       return thumbnail((RequestBuilder<TranscodeType>) null);
     }
@@ -303,14 +303,12 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
   /**
    * Sets the specific model to load data for.
    *
-   * <p> This method must be called at least once before
-   * {@link #into(com.bumptech.glide.request.target.Target)} is called. </p>
-   *
    * @param model The model to load data for, or null.
    * @return This request builder.
    */
   @CheckResult
   @SuppressWarnings("unchecked")
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable Object model) {
     return loadGeneric(model);
   }
@@ -320,9 +318,8 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
     isModelSet = true;
     return this;
   }
-
   /**
-   * Returns a request builder to load the given {@link Bitmap}.
+   * Returns an object to load the given {@link Bitmap}.
    *
    * <p>It's almost always better to allow Glide to load {@link Bitmap}s than
    * pass {@link Bitmap}s into Glide. If you have a custom way to obtain {@link Bitmap}s that is
@@ -330,8 +327,10 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * {@link com.bumptech.glide.load.model.ModelLoader} or
    * {@link com.bumptech.glide.load.ResourceDecoder} instead of using this method.
    *
-   * <p>The {@link DiskCacheStrategy} is set to {@link DiskCacheStrategy#NONE}. Using other
-   * strategies may result in undefined behavior.
+   * <p>The {@link DiskCacheStrategy} is set to {@link DiskCacheStrategy#NONE}. Previous calls to
+   * {@link #apply(RequestOptions)} or previously applied {@link DiskCacheStrategy}s will be
+   * overridden by this method. Applying an {@link DiskCacheStrategy} other than
+   * {@link DiskCacheStrategy#NONE} after calling this method may result in undefined behavior.
    *
    * <p>In memory caching relies on Object equality. The contents of the {@link Bitmap}s are not
    * compared.
@@ -339,6 +338,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @see #load(Object)
    */
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable Bitmap bitmap) {
     return loadGeneric(bitmap)
         .apply(diskCacheStrategyOf(DiskCacheStrategy.NONE));
@@ -353,8 +353,10 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * {@link com.bumptech.glide.load.model.ModelLoader} or
    * {@link com.bumptech.glide.load.ResourceDecoder} instead of using this method.
    *
-   * <p>The {@link DiskCacheStrategy} is set to {@link DiskCacheStrategy#NONE}. Using other
-   * strategies may result in undefined behavior.
+   * <p>The {@link DiskCacheStrategy} is set to {@link DiskCacheStrategy#NONE}. Previous calls to
+   * {@link #apply(RequestOptions)} or previously applied {@link DiskCacheStrategy}s will be
+   * overridden by this method. Applying an {@link DiskCacheStrategy} other than
+   * {@link DiskCacheStrategy#NONE} after calling this method may result in undefined behavior.
    *
    * <p>In memory caching relies on Object equality. The contents of the {@link Drawable}s are not
    * compared.
@@ -362,6 +364,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @see #load(Object)
    */
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable Drawable drawable) {
     return loadGeneric(drawable)
         .apply(diskCacheStrategyOf(DiskCacheStrategy.NONE));
@@ -386,6 +389,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @param string A file path, or a uri or url handled by
    * {@link com.bumptech.glide.load.model.UriLoader}.
    */
+  @Override
   @CheckResult
   public RequestBuilder<TranscodeType> load(@Nullable String string) {
     return loadGeneric(string);
@@ -410,6 +414,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * {@link com.bumptech.glide.load.model.UriLoader}.
    */
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable Uri uri) {
     return loadGeneric(uri);
   }
@@ -417,7 +422,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
   /**
    * Returns a request builder to load the given {@link File}.
    *
-   * <p> Note - this method caches data for Files using only the file path itself as the cache key.
+   * <p>Note - this method caches data for Files using only the file path itself as the cache key.
    * The data in the File can change so using this method can lead to displaying stale data. If you
    * expect the data in the File to change, Consider using
    * {@link com.bumptech.glide.request.RequestOptions#signature(com.bumptech.glide.load.Key)}
@@ -426,13 +431,13 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * {@link com.bumptech.glide.load.engine.DiskCacheStrategy#NONE} and/or
    * {@link com.bumptech.glide.request.RequestOptions#skipMemoryCache(boolean)} may be
    * appropriate.
-   * </p>
    *
    * @see #load(Object)
    *
    * @param file The File containing the image
    */
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable File file) {
     return loadGeneric(file);
   }
@@ -470,6 +475,7 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    * @see com.bumptech.glide.signature.ApplicationVersionSignature
    */
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@RawRes @DrawableRes @Nullable Integer resourceId) {
     return loadGeneric(resourceId).apply(signatureOf(ApplicationVersionSignature.obtain(context)));
   }
@@ -479,12 +485,13 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
    *
    * @param url The URL representing the image.
    * @see #load(Object)
-   * @deprecated The {@link java.net.URL} class has <a href="http://goo.gl/c4hHNu">a number of
-   * performance problems</a> and should generally be avoided when possible. Prefer
-   * {@link #load(android.net.Uri)} or {@link #load(String)}.
+   * @deprecated The {@link java.net.URL} class has
+   * <a href="http://goo.gl/c4hHNu">a number of performance problems</a> and should generally be
+   * avoided when possible. Prefer {@link #load(android.net.Uri)} or {@link #load(String)}.
    */
   @Deprecated
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable URL url) {
     return loadGeneric(url);
   }
@@ -492,16 +499,22 @@ public class RequestBuilder<TranscodeType> implements Cloneable {
   /**
    * Returns a request to load the given byte array.
    *
-   * <p> Note - by default loads for bytes are not cached in either the memory or the disk cache.
-   * </p>
+   * <p>Note - by default loads for bytes are not cached in either the memory or the disk cache.
    *
    * @param model the data to load.
    * @see #load(Object)
    */
   @CheckResult
+  @Override
   public RequestBuilder<TranscodeType> load(@Nullable byte[] model) {
-    return loadGeneric(model).apply(signatureOf(new ObjectKey(UUID.randomUUID().toString()))
-        .diskCacheStrategy(DiskCacheStrategy.NONE).skipMemoryCache(true /*skipMemoryCache*/));
+    RequestBuilder<TranscodeType> result = loadGeneric(model);
+    if (!result.requestOptions.isDiskCacheStrategySet()) {
+        result = result.apply(diskCacheStrategyOf(DiskCacheStrategy.NONE));
+    }
+    if (!result.requestOptions.isSkipMemoryCacheSet()) {
+      result = result.apply(skipMemoryCacheOf(true /*skipMemoryCache*/));
+    }
+    return result;
   }
 
   /**

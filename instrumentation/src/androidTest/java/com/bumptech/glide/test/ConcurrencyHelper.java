@@ -1,6 +1,7 @@
 package com.bumptech.glide.test;
 
 import android.graphics.drawable.Drawable;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
@@ -28,15 +29,25 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class ConcurrencyHelper {
   private final Handler handler = new Handler(Looper.getMainLooper());
-  static final long TIMEOUT_MS = 5000;
-  static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
+  private static final long TIMEOUT_SECONDS = 5;
+  private static final TimeUnit TIMEOUT_UNIT = TimeUnit.SECONDS;
 
-  public <T> T get(Future<T> future) {
-    try {
-      return future.get(TIMEOUT_MS, TIMEOUT_UNIT);
-    } catch (InterruptedException | ExecutionException | TimeoutException e) {
-      throw new RuntimeException(e);
-    }
+  public <T> T get(final Future<T> future) {
+    final AtomicReference<T> reference = new AtomicReference<>();
+    wait(new Waiter() {
+      @Override
+      public boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException {
+        try {
+          reference.set(future.get(timeout, timeUnit));
+          return true;
+        } catch (ExecutionException e) {
+          throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+          return false;
+        }
+      }
+    });
+    return reference.get();
   }
 
   public <T, Y extends Future<T>> Y wait(Y future) {
@@ -46,7 +57,7 @@ public class ConcurrencyHelper {
 
   public void loadOnOtherThread(final Runnable runnable) {
     final AtomicBoolean isDone = new AtomicBoolean();
-    Thread thread = new Thread(new Runnable() {
+    final Thread thread = new Thread(new Runnable() {
       @Override
       public void run() {
         runnable.run();
@@ -54,14 +65,14 @@ public class ConcurrencyHelper {
       }
     });
     thread.start();
-    try {
-      thread.join(TIMEOUT_MS, /*nanos=*/0);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    if (!isDone.get()) {
-      throw new IllegalStateException("Failed to finish job in available time");
-    }
+
+    wait(new Waiter() {
+      @Override
+      public boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException {
+        thread.join(timeUnit.toMillis(timeout));
+        return isDone.get();
+      }
+    });
   }
 
   public void loadOnMainThread(
@@ -249,14 +260,12 @@ public class ConcurrencyHelper {
   }
 
   private <T> void callOnMainThread(final Callable<T> callable) {
-    final AtomicReference<T> reference = new AtomicReference<>();
     final CountDownLatch latch = new CountDownLatch(1);
     handler.post(new Runnable() {
       @Override
       public void run() {
         try {
-          T result = callable.call();
-          reference.set(result);
+          callable.call();
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
@@ -264,16 +273,39 @@ public class ConcurrencyHelper {
       }
     });
     waitOnLatch(latch);
-    reference.get();
   }
 
-  private static void waitOnLatch(CountDownLatch latch) {
-    try {
-      if (!latch.await(TIMEOUT_MS, TIMEOUT_UNIT)) {
-        throw new RuntimeException("Timed out waiting for latch");
+  static void waitOnLatch(final CountDownLatch latch) {
+    wait(new Waiter() {
+      @Override
+      public boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException {
+        return latch.await(timeout, timeUnit);
       }
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    });
+  }
+
+  private interface Waiter {
+    boolean await(long timeout, TimeUnit timeUnit) throws InterruptedException;
+  }
+
+  private static void wait(Waiter waiter) {
+    boolean isFinished = false;
+     do {
+       try {
+         try {
+           isFinished = waiter.await(TIMEOUT_SECONDS, TIMEOUT_UNIT);
+           if (!isFinished) {
+             throw new RuntimeException("Timed out while waiting");
+           }
+         } catch (InterruptedException e) {
+           throw new RuntimeException(e);
+         }
+       } catch (RuntimeException e) {
+         if (Debug.isDebuggerConnected()) {
+           continue;
+         }
+         throw e;
+       }
+     } while (Debug.isDebuggerConnected() && !isFinished);
   }
 }
