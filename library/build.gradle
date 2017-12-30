@@ -20,6 +20,10 @@ dependencies {
     testImplementation "org.robolectric:robolectric:${ROBOLECTRIC_VERSION}"
     testImplementation "com.squareup.okhttp3:mockwebserver:${MOCKWEBSERVER_VERSION}"
     testImplementation "com.android.support:support-v4:${ANDROID_SUPPORT_VERSION}"
+
+    if (project.plugins.hasPlugin('net.ltgt.errorprone')) {
+       errorprone "com.google.errorprone:error_prone_core:${ERROR_PRONE_VERSION}"
+    }
 }
 
 android.testOptions.unitTests.all { Test testTask ->
@@ -78,15 +82,15 @@ afterEvaluate {
                         it.javaCompile.classpath.files
                     })
         }
-
-
         effort = 'max'
-
         excludeFilter = file("findbugs-exclude.xml")
 
+        // Failures are caught and printed by the violations plugin.
+        ignoreFailures = true
+
         reports {
-            xml.enabled = false
-            html.enabled = true
+            xml.enabled = true
+            html.enabled = false
         }
     }
 
@@ -108,9 +112,12 @@ afterEvaluate {
         ruleSetFiles = files('pmd-ruleset.xml')
         source android.sourceSets.main.java.srcDirs
 
+        // Failures are caught and printed by the violations plugin.
+        ignoreFailures = true
+
         reports {
-            xml.enabled = false
-            html.enabled = true
+            xml.enabled = true
+            html.enabled = false
         }
     }
 
