@@ -235,10 +235,14 @@ public class Engine implements EngineJobListener,
     return new LoadStatus(cb, engineJob);
   }
 
+  // TODO(#2776): Remove this suppression.
+  @SuppressWarnings("PMD.UnusedPrivateMethod")
   private static void logWithTimeAndKey(String log, long startTime, Key key) {
     Log.v(TAG, log + " in " + LogTime.getElapsedMillis(startTime) + "ms, key: " + key);
   }
 
+  // TODO(#2776): Remove this suppression.
+  @SuppressWarnings("PMD.UnusedPrivateMethod")
   @Nullable
   private EngineResource<?> loadFromActiveResources(Key key, boolean isMemoryCacheable) {
     if (!isMemoryCacheable) {
@@ -252,6 +256,8 @@ public class Engine implements EngineJobListener,
     return active;
   }
 
+  // TODO(#2776): Remove this suppression.
+  @SuppressWarnings("PMD.UnusedPrivateMethod")
   private EngineResource<?> loadFromCache(Key key, boolean isMemoryCacheable) {
     if (!isMemoryCacheable) {
       return null;
@@ -265,7 +271,6 @@ public class Engine implements EngineJobListener,
     return cached;
   }
 
-  @SuppressWarnings("unchecked")
   private EngineResource<?> getEngineResourceFromCache(Key key) {
     Resource<?> cached = cache.remove(key);
 
@@ -394,8 +399,9 @@ public class Engine implements EngineJobListener,
   @VisibleForTesting
   static class DecodeJobFactory {
     @Synthetic final DecodeJob.DiskCacheProvider diskCacheProvider;
-    @Synthetic final Pools.Pool<DecodeJob<?>> pool = FactoryPools.simple(JOB_POOL_SIZE,
-        new FactoryPools.Factory<DecodeJob<?>>() {
+    @Synthetic final Pools.Pool<DecodeJob<?>> pool =
+        FactoryPools.simple(JOB_POOL_SIZE,
+            new FactoryPools.Factory<DecodeJob<?>>() {
           @Override
           public DecodeJob<?> create() {
             return new DecodeJob<>(diskCacheProvider, pool);
@@ -453,19 +459,21 @@ public class Engine implements EngineJobListener,
     @Synthetic final GlideExecutor sourceUnlimitedExecutor;
     @Synthetic final GlideExecutor animationExecutor;
     @Synthetic final EngineJobListener listener;
-    @Synthetic final Pools.Pool<EngineJob<?>> pool = FactoryPools.simple(JOB_POOL_SIZE,
-        new FactoryPools.Factory<EngineJob<?>>() {
-          @Override
-          public EngineJob<?> create() {
-            return new EngineJob<>(
-                diskCacheExecutor,
-                sourceExecutor,
-                sourceUnlimitedExecutor,
-                animationExecutor,
-                listener,
-                pool);
-          }
-        });
+    @Synthetic final Pools.Pool<EngineJob<?>> pool =
+        FactoryPools.simple(
+            JOB_POOL_SIZE,
+            new FactoryPools.Factory<EngineJob<?>>() {
+              @Override
+              public EngineJob<?> create() {
+                return new EngineJob<>(
+                    diskCacheExecutor,
+                    sourceExecutor,
+                    sourceUnlimitedExecutor,
+                    animationExecutor,
+                    listener,
+                    pool);
+              }
+            });
 
     EngineJobFactory(
         GlideExecutor diskCacheExecutor,
