@@ -53,6 +53,7 @@ public class RequestManagerRetriever implements Handler.Callback {
   /**
    * Pending adds for RequestManagerFragments.
    */
+  @SuppressWarnings("deprecation")
   @VisibleForTesting
   final Map<android.app.FragmentManager, RequestManagerFragment> pendingRequestManagerFragments =
       new HashMap<>();
@@ -146,6 +147,7 @@ public class RequestManagerRetriever implements Handler.Callback {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @NonNull
   public RequestManager get(@NonNull Activity activity) {
     if (Util.isOnBackgroundThread()) {
@@ -157,6 +159,7 @@ public class RequestManagerRetriever implements Handler.Callback {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @NonNull
   public RequestManager get(@NonNull View view) {
     if (Util.isOnBackgroundThread()) {
@@ -229,6 +232,8 @@ public class RequestManagerRetriever implements Handler.Callback {
     return result;
   }
 
+  @SuppressWarnings({"deprecation", "DeprecatedIsStillUsed"})
+  @Deprecated
   @Nullable
   private android.app.Fragment findFragment(@NonNull View target, @NonNull Activity activity) {
     tempViewToFragment.clear();
@@ -255,6 +260,8 @@ public class RequestManagerRetriever implements Handler.Callback {
 
   // TODO: Consider using an accessor class in the support library package to more directly retrieve
   // non-support Fragments.
+  @SuppressWarnings("deprecation")
+  @Deprecated
   @TargetApi(Build.VERSION_CODES.O)
   private void findAllFragmentsWithViews(
       @NonNull android.app.FragmentManager fragmentManager,
@@ -271,6 +278,8 @@ public class RequestManagerRetriever implements Handler.Callback {
     }
   }
 
+  @SuppressWarnings("deprecation")
+  @Deprecated
   private void findAllFragmentsWithViewsPreO(
       @NonNull android.app.FragmentManager fragmentManager,
       @NonNull ArrayMap<View, android.app.Fragment> result) {
@@ -313,6 +322,8 @@ public class RequestManagerRetriever implements Handler.Callback {
     }
   }
 
+  @SuppressWarnings("deprecation")
+  @Deprecated
   @NonNull
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
   public RequestManager get(@NonNull android.app.Fragment fragment) {
@@ -328,6 +339,8 @@ public class RequestManagerRetriever implements Handler.Callback {
     }
   }
 
+  @SuppressWarnings("deprecation")
+  @Deprecated
   @NonNull
   RequestManagerFragment getRequestManagerFragment(
       @NonNull final android.app.FragmentManager fm, @Nullable android.app.Fragment parentHint) {
@@ -345,6 +358,8 @@ public class RequestManagerRetriever implements Handler.Callback {
     return current;
   }
 
+  @SuppressWarnings({"deprecation", "DeprecatedIsStillUsed"})
+  @Deprecated
   @NonNull
   private RequestManager fragmentGet(@NonNull Context context,
       @NonNull android.app.FragmentManager fm,
