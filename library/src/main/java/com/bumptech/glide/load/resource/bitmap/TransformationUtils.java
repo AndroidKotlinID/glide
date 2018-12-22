@@ -330,6 +330,8 @@ public final class TransformationUtils {
 
     matrix.postTranslate(-newRect.left, -newRect.top);
 
+    result.setHasAlpha(inBitmap.hasAlpha());
+
     applyMatrix(inBitmap, result, matrix);
     return result;
   }
