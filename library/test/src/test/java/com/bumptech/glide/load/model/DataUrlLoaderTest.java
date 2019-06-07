@@ -6,9 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import android.util.Base64;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import android.util.Base64;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.Options;
 import com.bumptech.glide.load.data.DataFetcher;
@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config;
 
 /** Tests for the {@link DataUrlLoader} class. */
 @RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE, sdk = 18)
+@Config(sdk = 18)
 public class DataUrlLoaderTest {
 
   // A valid base64-encoded PNG (a small "Google" logo).

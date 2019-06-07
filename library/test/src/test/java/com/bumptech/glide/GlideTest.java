@@ -29,10 +29,10 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.Key;
 import com.bumptech.glide.load.Options;
@@ -92,7 +92,6 @@ import org.robolectric.shadows.ShadowBitmap;
 /** Tests for the {@link Glide} interface and singleton. */
 @RunWith(RobolectricTestRunner.class)
 @Config(
-    manifest = Config.NONE,
     sdk = 18,
     shadows = {
       GlideTest.ShadowFileDescriptorContentResolver.class,

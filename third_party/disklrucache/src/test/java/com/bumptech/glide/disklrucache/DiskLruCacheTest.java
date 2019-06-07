@@ -524,7 +524,7 @@ public final class DiskLruCacheTest {
   @Test public void readingTheSameFileMultipleTimes() throws Exception {
     set("a", "a", "b");
     DiskLruCache.Value value = cache.get("a");
-    assertThat(value.getFile(0)).isSameAs(value.getFile(0));
+    assertThat(value.getFile(0)).isSameInstanceAs(value.getFile(0));
   }
 
   @Test public void rebuildJournalOnRepeatedReads() throws Exception {
@@ -930,7 +930,9 @@ public final class DiskLruCacheTest {
     assertThat(!file.exists() || file.delete()).isTrue();
   }
 
-  static final class FileSubject extends ComparableSubject<FileSubject, File> {
+  // TODO(b/134664588): Remove after go/truth-subject-lsc
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  static final class FileSubject extends ComparableSubject {
     private static final Subject.Factory<FileSubject, File> FACTORY =
         new Subject.Factory<FileSubject, File>() {
           @Override
