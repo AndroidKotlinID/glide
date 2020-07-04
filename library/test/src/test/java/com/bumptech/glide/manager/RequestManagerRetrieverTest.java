@@ -8,6 +8,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.robolectric.annotation.LooperMode.Mode.LEGACY;
 
 import android.app.Activity;
 import android.content.Context;
@@ -39,7 +40,9 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 
+@LooperMode(LEGACY)
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 18, shadows = GlideShadowLooper.class)
 public class RequestManagerRetrieverTest {
@@ -55,7 +58,7 @@ public class RequestManagerRetrieverTest {
   public void setUp() {
     appContext = ApplicationProvider.getApplicationContext();
 
-    retriever = new RequestManagerRetriever(/*factory=*/ null);
+    retriever = new RequestManagerRetriever(/*factory=*/ null, /* addFirstFrameWaiter= */ false);
 
     harnesses =
         new RetrieverHarness[] {new DefaultRetrieverHarness(), new SupportRetrieverHarness()};

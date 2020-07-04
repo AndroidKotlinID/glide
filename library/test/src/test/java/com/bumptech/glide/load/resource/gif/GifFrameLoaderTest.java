@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.robolectric.annotation.LooperMode.Mode.LEGACY;
 
 import android.graphics.Bitmap;
 import android.os.Handler;
@@ -41,7 +42,9 @@ import org.mockito.MockitoAnnotations;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 
+@LooperMode(LEGACY)
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 18)
 public class GifFrameLoaderTest {
@@ -333,6 +336,18 @@ public class GifFrameLoaderTest {
     loader.subscribe(callback);
     verify(callback, times(2)).onFrameReady();
     assertThat(loader.getCurrentFrame()).isEqualTo(expected);
+  }
+
+  @Test
+  public void onFrameReady_whenInvisible_setVisibleLater() {
+    loader = createGifFrameLoader(/*handler=*/ null);
+    // The target is invisible at this point.
+    loader.unsubscribe(callback);
+    loader.setNextStartFromFirstFrame();
+    DelayTarget loaded = mock(DelayTarget.class);
+    when(loaded.getResource()).thenReturn(Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888));
+    loader.onFrameReady(loaded);
+    loader.subscribe(callback);
   }
 
   @Test

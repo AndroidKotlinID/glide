@@ -17,6 +17,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.robolectric.annotation.LooperMode.Mode.LEGACY;
 
 import com.bumptech.glide.GlideContext;
 import com.bumptech.glide.Priority;
@@ -43,7 +44,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 
+@LooperMode(LEGACY)
 @RunWith(RobolectricTestRunner.class)
 @Config(
     sdk = 18,
@@ -124,7 +127,8 @@ public class EngineTest {
 
     harness.doLoad();
 
-    verify(harness.cb).onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE));
+    verify(harness.cb)
+        .onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE), eq(false));
   }
 
   @Test
@@ -158,7 +162,8 @@ public class EngineTest {
 
     harness.doLoad();
 
-    verify(harness.cb).onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE));
+    verify(harness.cb)
+        .onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE), eq(false));
     verify(harness.cache, never()).remove(any(Key.class));
   }
 
@@ -179,7 +184,8 @@ public class EngineTest {
 
     harness.doLoad();
 
-    verify(harness.cb).onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE));
+    verify(harness.cb)
+        .onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE), eq(false));
   }
 
   @Test
@@ -198,7 +204,8 @@ public class EngineTest {
 
     harness.doLoad();
 
-    verify(harness.cb).onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE));
+    verify(harness.cb)
+        .onResourceReady(eq(harness.resource), eq(DataSource.MEMORY_CACHE), eq(false));
   }
 
   @Test
@@ -219,11 +226,11 @@ public class EngineTest {
               }
             })
         .when(harness.cb)
-        .onResourceReady(anyResource(), isADataSource());
+        .onResourceReady(anyResource(), isADataSource(), anyBoolean());
 
     harness.doLoad();
 
-    verify(harness.cb).onResourceReady(anyResource(), isADataSource());
+    verify(harness.cb).onResourceReady(anyResource(), isADataSource(), anyBoolean());
   }
 
   @Test
@@ -463,7 +470,7 @@ public class EngineTest {
         .start(anyDecodeJobOrNull());
     harness.doLoad();
     harness.doLoad();
-    verify(harness.cb).onResourceReady(any(Resource.class), eq(DataSource.MEMORY_CACHE));
+    verify(harness.cb).onResourceReady(any(Resource.class), eq(DataSource.MEMORY_CACHE), eq(false));
   }
 
   @Test
@@ -483,7 +490,7 @@ public class EngineTest {
     harness.doLoad();
     harness.getEngine().onResourceReleased(harness.cacheKey, harness.resource);
     harness.doLoad();
-    verify(harness.cb).onResourceReady(any(Resource.class), eq(DataSource.MEMORY_CACHE));
+    verify(harness.cb).onResourceReady(any(Resource.class), eq(DataSource.MEMORY_CACHE), eq(false));
   }
 
   @Test
