@@ -50,7 +50,6 @@ import com.bumptech.glide.load.model.UnitModelLoader;
 import com.bumptech.glide.load.model.UriLoader;
 import com.bumptech.glide.load.model.UrlUriLoader;
 import com.bumptech.glide.load.model.stream.HttpGlideUrlLoader;
-import com.bumptech.glide.load.model.stream.HttpUriLoader;
 import com.bumptech.glide.load.model.stream.MediaStoreImageThumbLoader;
 import com.bumptech.glide.load.model.stream.MediaStoreVideoThumbLoader;
 import com.bumptech.glide.load.model.stream.QMediaStoreUriLoader;
@@ -63,6 +62,7 @@ import com.bumptech.glide.load.resource.bitmap.ByteBufferBitmapImageDecoderResou
 import com.bumptech.glide.load.resource.bitmap.DefaultImageHeaderParser;
 import com.bumptech.glide.load.resource.bitmap.Downsampler;
 import com.bumptech.glide.load.resource.bitmap.ExifInterfaceImageHeaderParser;
+import com.bumptech.glide.load.resource.bitmap.HardwareConfigState;
 import com.bumptech.glide.load.resource.bitmap.InputStreamBitmapImageDecoderResourceDecoder;
 import com.bumptech.glide.load.resource.bitmap.ParcelFileDescriptorBitmapDecoder;
 import com.bumptech.glide.load.resource.bitmap.ResourceBitmapDecoder;
@@ -235,6 +235,19 @@ public class Glide implements ComponentCallbacks2 {
     }
   }
 
+  /**
+   * Allows hardware Bitmaps to be used prior to the first frame in the app being drawn as soon as
+   * this method is called.
+   *
+   * <p>If you use this method in non-test code, your app will experience native crashes on some
+   * versions of Android if you try to decode a hardware Bitmap. This method is only useful for
+   * testing.
+   */
+  @VisibleForTesting
+  public static void enableHardwareBitmaps() {
+    HardwareConfigState.getInstance().unblockHardwareBitmaps();
+  }
+
   @VisibleForTesting
   public static void tearDown() {
     synchronized (Glide.class) {
@@ -373,7 +386,6 @@ public class Glide implements ComponentCallbacks2 {
       @NonNull List<RequestListener<Object>> defaultRequestListeners,
       boolean isLoggingRequestOriginsEnabled,
       boolean isImageDecoderEnabledForBitmaps,
-      boolean blockHardwareBitmaps,
       int manualOverrideHardwareBitmapMaxFdCount) {
     this.engine = engine;
     this.bitmapPool = bitmapPool;
@@ -527,7 +539,6 @@ public class Glide implements ComponentCallbacks2 {
         .append(String.class, ParcelFileDescriptor.class, new StringLoader.FileDescriptorFactory())
         .append(
             String.class, AssetFileDescriptor.class, new StringLoader.AssetFileDescriptorFactory())
-        .append(Uri.class, InputStream.class, new HttpUriLoader.Factory())
         .append(Uri.class, InputStream.class, new AssetUriLoader.StreamFactory(context.getAssets()))
         .append(
             Uri.class,
