@@ -152,9 +152,12 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   @CheckResult
   public RequestBuilder<TranscodeType> transition(
       @NonNull TransitionOptions<?, ? super TranscodeType> transitionOptions) {
+    if (isAutoCloneEnabled()) {
+      return clone().transition(transitionOptions);
+    }
     this.transitionOptions = Preconditions.checkNotNull(transitionOptions);
     isDefaultTransitionOptionsSet = false;
-    return this;
+    return selfOrThrowIfLocked();
   }
 
   /**
@@ -173,6 +176,9 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   @SuppressWarnings("unchecked")
   public RequestBuilder<TranscodeType> listener(
       @Nullable RequestListener<TranscodeType> requestListener) {
+    if (isAutoCloneEnabled()) {
+      return clone().listener(requestListener);
+    }
     this.requestListeners = null;
     return addListener(requestListener);
   }
@@ -188,13 +194,16 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   @CheckResult
   public RequestBuilder<TranscodeType> addListener(
       @Nullable RequestListener<TranscodeType> requestListener) {
+    if (isAutoCloneEnabled()) {
+      return clone().addListener(requestListener);
+    }
     if (requestListener != null) {
       if (this.requestListeners == null) {
         this.requestListeners = new ArrayList<>();
       }
       this.requestListeners.add(requestListener);
     }
-    return this;
+    return selfOrThrowIfLocked();
   }
 
   /**
@@ -221,8 +230,43 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
    */
   @NonNull
   public RequestBuilder<TranscodeType> error(@Nullable RequestBuilder<TranscodeType> errorBuilder) {
+    if (isAutoCloneEnabled()) {
+      return clone().error(errorBuilder);
+    }
     this.errorBuilder = errorBuilder;
-    return this;
+    return selfOrThrowIfLocked();
+  }
+
+  /**
+   * Identical to calling {@link #error(RequestBuilder)} where the {@code RequestBuilder} is the
+   * result of calling {@link #clone()} and removing any existing thumbnail and error {@code
+   * RequestBuilders}.
+   *
+   * <p>Other than thumbnail and error {@code RequestBuilder}s, which are removed, all other options
+   * are retained from the primary request. However, <b>order matters!</b> Any options applied after
+   * this method is called will not be applied to the error {@code RequestBuilder}.
+   *
+   * <p>WARNING: Calling this method with a {@code model} whose type does not match the type of the
+   * model passed to {@code load()} may be dangerous! Any options that were applied by the various
+   * type specific {@code load()} methods, like {@link #load(byte[])} will be copied to the error
+   * request here even if the {@code model} you pass to this method doesn't match. Similary, options
+   * that would be normally applied by type specific {@code load()} methods will <em>not</em> be
+   * applied to this request. If this behavior is confusing or unexpected, use {@link
+   * #error(RequestBuilder)} instead.
+   */
+  @NonNull
+  @CheckResult
+  public RequestBuilder<TranscodeType> error(Object model) {
+    if (model == null) {
+      return error((RequestBuilder<TranscodeType>) null);
+    }
+    return error(cloneWithNullErrorAndThumbnail().load(model));
+  }
+
+  private RequestBuilder<TranscodeType> cloneWithNullErrorAndThumbnail() {
+    return clone()
+        .error((RequestBuilder<TranscodeType>) null)
+        .thumbnail((RequestBuilder<TranscodeType>) null);
   }
 
   /**
@@ -247,9 +291,12 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   @SuppressWarnings("unchecked")
   public RequestBuilder<TranscodeType> thumbnail(
       @Nullable RequestBuilder<TranscodeType> thumbnailRequest) {
+    if (isAutoCloneEnabled()) {
+      return clone().thumbnail(thumbnailRequest);
+    }
     this.thumbnailBuilder = thumbnailRequest;
 
-    return this;
+    return selfOrThrowIfLocked();
   }
 
   /**
@@ -381,12 +428,15 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   @CheckResult
   @SuppressWarnings("unchecked")
   public RequestBuilder<TranscodeType> thumbnail(float sizeMultiplier) {
+    if (isAutoCloneEnabled()) {
+      return clone().thumbnail(sizeMultiplier);
+    }
     if (sizeMultiplier < 0f || sizeMultiplier > 1f) {
       throw new IllegalArgumentException("sizeMultiplier must be between 0 and 1");
     }
     this.thumbSizeMultiplier = sizeMultiplier;
 
-    return this;
+    return selfOrThrowIfLocked();
   }
 
   /**
@@ -405,9 +455,12 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
 
   @NonNull
   private RequestBuilder<TranscodeType> loadGeneric(@Nullable Object model) {
+    if (isAutoCloneEnabled()) {
+      return clone().loadGeneric(model);
+    }
     this.model = model;
     isModelSet = true;
-    return this;
+    return selfOrThrowIfLocked();
   }
   /**
    * Returns an object to load the given {@link Bitmap}.
@@ -613,7 +666,6 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
    * arguments, the current model is not copied so changes to the model will affect both builders.
    */
   @SuppressWarnings({
-    "unchecked",
     // we don't want to throw to be user friendly
     "PMD.CloneThrowsCloneNotSupportedException"
   })
@@ -622,6 +674,15 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   public RequestBuilder<TranscodeType> clone() {
     RequestBuilder<TranscodeType> result = super.clone();
     result.transitionOptions = result.transitionOptions.clone();
+    if (result.requestListeners != null) {
+      result.requestListeners = new ArrayList<>(result.requestListeners);
+    }
+    if (result.thumbnailBuilder != null) {
+      result.thumbnailBuilder = result.thumbnailBuilder.clone();
+    }
+    if (result.errorBuilder != null) {
+      result.errorBuilder = result.errorBuilder.clone();
+    }
     return result;
   }
 

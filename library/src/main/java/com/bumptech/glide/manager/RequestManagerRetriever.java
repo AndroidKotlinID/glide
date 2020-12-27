@@ -22,7 +22,10 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.GlideBuilder.WaitForFramesAfterTrimMemory;
+import com.bumptech.glide.GlideExperiments;
 import com.bumptech.glide.RequestManager;
+import com.bumptech.glide.load.resource.bitmap.HardwareConfigState;
 import com.bumptech.glide.util.Preconditions;
 import com.bumptech.glide.util.Util;
 import java.util.Collection;
@@ -70,14 +73,24 @@ public class RequestManagerRetriever implements Handler.Callback {
   // This is really misplaced here, but to put it anywhere else means duplicating all of the
   // Fragment/Activity extraction logic that already exists here. It's gross, but less likely to
   // break.
-  private final FirstFrameWaiter firstFrameWaiter =
-      Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-          ? new FirstFrameWaiterO()
-          : new DoNothingFirstFrameWaiter();
+  private final FrameWaiter frameWaiter;
 
-  public RequestManagerRetriever(@Nullable RequestManagerFactory factory) {
+  public RequestManagerRetriever(
+      @Nullable RequestManagerFactory factory, GlideExperiments experiments) {
     this.factory = factory != null ? factory : DEFAULT_FACTORY;
     handler = new Handler(Looper.getMainLooper(), this /* Callback */);
+
+    frameWaiter = buildFrameWaiter(experiments);
+  }
+
+  private static FrameWaiter buildFrameWaiter(GlideExperiments experiments) {
+    if (!HardwareConfigState.HARDWARE_BITMAPS_SUPPORTED
+        || !HardwareConfigState.BLOCK_HARDWARE_BITMAPS_WHEN_GL_CONTEXT_MIGHT_NOT_BE_INITIALIZED) {
+      return new DoNothingFirstFrameWaiter();
+    }
+    return experiments.isEnabled(WaitForFramesAfterTrimMemory.class)
+        ? new FirstFrameAndAfterTrimMemoryWaiter()
+        : new FirstFrameWaiter();
   }
 
   @NonNull
@@ -133,7 +146,7 @@ public class RequestManagerRetriever implements Handler.Callback {
       return get(activity.getApplicationContext());
     } else {
       assertNotDestroyed(activity);
-      firstFrameWaiter.registerSelf(activity);
+      frameWaiter.registerSelf(activity);
       FragmentManager fm = activity.getSupportFragmentManager();
       return supportFragmentGet(activity, fm, /*parentHint=*/ null, isActivityVisible(activity));
     }
@@ -152,7 +165,7 @@ public class RequestManagerRetriever implements Handler.Callback {
       // we manage not to register the first frame waiter for a while, the consequences are not
       // catastrophic, we'll just use some extra memory.
       if (fragment.getActivity() != null) {
-        firstFrameWaiter.registerSelf(fragment.getActivity());
+        frameWaiter.registerSelf(fragment.getActivity());
       }
       FragmentManager fm = fragment.getChildFragmentManager();
       return supportFragmentGet(fragment.getContext(), fm, fragment, fragment.isVisible());
@@ -168,7 +181,7 @@ public class RequestManagerRetriever implements Handler.Callback {
       return get((FragmentActivity) activity);
     } else {
       assertNotDestroyed(activity);
-      firstFrameWaiter.registerSelf(activity);
+      frameWaiter.registerSelf(activity);
       android.app.FragmentManager fm = activity.getFragmentManager();
       return fragmentGet(activity, fm, /*parentHint=*/ null, isActivityVisible(activity));
     }
@@ -353,7 +366,7 @@ public class RequestManagerRetriever implements Handler.Callback {
       // we manage not to register the first frame waiter for a while, the consequences are not
       // catastrophic, we'll just use some extra memory.
       if (fragment.getActivity() != null) {
-        firstFrameWaiter.registerSelf(fragment.getActivity());
+        frameWaiter.registerSelf(fragment.getActivity());
       }
       android.app.FragmentManager fm = fragment.getChildFragmentManager();
       return fragmentGet(fragment.getActivity(), fm, fragment, fragment.isVisible());
